@@ -57,3 +57,50 @@ class CatalogItem(BaseModel):
     id: str
     label: str
     description: str = ""
+
+
+# ---- 多平台发布 ----
+class PlatformStatus(BaseModel):
+    id: str
+    label: str
+    login_kind: str
+    supports_text: bool
+    supports_image: bool
+    supports_video: bool
+    available: bool
+    note: str = ""
+    logged_in: bool = False
+    user_name: str = ""
+
+
+class LoginChallengeResp(BaseModel):
+    kind: str
+    qrcode_image: Optional[str] = None
+    challenge_id: str = ""
+    detail: str = ""
+
+
+class LoginStatusResp(BaseModel):
+    logged_in: bool
+    detail: str = ""
+    user_name: str = ""
+
+
+class NoteInput(BaseModel):
+    title: str = ""
+    content: str = ""
+    images: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    video: Optional[str] = None
+
+
+class PublishRequest(BaseModel):
+    job_id: Optional[str] = Field(default=None, description="从某任务成稿发布；与 note 二选一")
+    note: Optional[NoteInput] = None
+
+
+class PublishResponse(BaseModel):
+    ok: bool
+    platform: str
+    url: str = ""
+    detail: str = ""

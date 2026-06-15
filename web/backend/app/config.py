@@ -23,6 +23,9 @@ class Settings:
 
         self.app_secret_key: str = os.environ.get("APP_SECRET_KEY", "")
 
+        # 小红书：xiaohongshu-mcp 的 MCP 端点（如 http://localhost:18060/mcp）
+        self.xhs_mcp_url: str = os.environ.get("XHS_MCP_URL", "")
+
         skill_dir = os.environ.get("WEWRITE_SKILL_DIR", "")
         self.skill_dir: Path = Path(skill_dir).resolve() if skill_dir else _repo_root_guess()
 

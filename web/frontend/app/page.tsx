@@ -14,6 +14,7 @@ import {
   getThemes,
   streamJob,
 } from "@/lib/api";
+import PublishPanel from "@/components/PublishPanel";
 
 type LogLine = { kind: string; text: string };
 
@@ -271,6 +272,8 @@ export default function HomePage() {
           ) : (
             <p className="hint">未找到成稿文件。请查看上方进度日志排查。</p>
           )}
+
+          {result.article_markdown && <PublishPanel jobId={result.id} />}
         </div>
       )}
     </>

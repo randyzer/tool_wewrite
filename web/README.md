@@ -78,4 +78,33 @@ npm run dev   # http://localhost:3000
 ```
 
 > 当前后端的账户/任务存储是**进程内存版**，便于本地起步与演示；生产需替换为数据库（账户、任务、加密凭证）并把每个任务跑在隔离沙箱容器里（Agent 以 `bypassPermissions` 执行 Bash，必须沙箱化）。详见 `backend/app/store.py` 与 `backend/app/agent_runner.py` 顶部的 NOTE。
+
+## 多平台发布（`backend/app/publisher/`）
+
+成稿后可发布到多个平台。统一的适配层（`publisher/base.py`）下每个平台一个适配器：
+
+| 平台 | 渠道 | 状态 |
+|------|------|------|
+| 微信公众号 | 官方草稿箱 API（appid/secret） | ✅ 已有，主管道直接推送 |
+| 小红书 | 浏览器自动化，经 [`xiaohongshu-mcp`](https://github.com/xpzouying/xiaohongshu-mcp) 的 MCP 工具发布图文笔记 | ✅ 原型：扫码登录 + 发布 |
+| 抖音 | 以视频为主，WeWrite 暂不产视频 | ⏳ 登记为未开放 |
+
+**为什么这样接**：小红书/抖音对个人创作者**无开放发布 API**，社区普遍用浏览器自动化 + cookie
+登录态复用。`xiaohongshu-mcp` 把这套能力封装成 MCP 工具，我们的后端作为 MCP 客户端调用
+（真实网络调用隔离在 `publisher/mcp_client.py` 的 `HttpMcpTransport`，其余逻辑可用
+`FakeTransport` 单测）。
+
+**跑起小红书发布**：先部署 xiaohongshu-mcp（见其仓库，Docker 一条命令），再在后端
+`.env` 设 `XHS_MCP_URL=http://localhost:18060/mcp`。前端「成稿 → 发布到平台」面板里点
+「扫码登录」→ 用小红书 App 扫码 → 「发布」。
+
+发布 API：`GET /api/publish/platforms`、`POST /api/publish/{platform}/login/start`、
+`GET /api/publish/{platform}/status`、`POST /api/publish/{platform}`、
+`DELETE /api/publish/{platform}/login`。
+
+> **待办/限制**：① 登录态（cookie）已按用户**加密存储**于 `Account.platform_login`，但参考
+> 的 xiaohongshu-mcp 是**单账号、cookie 存服务端**的——真正多租户需为每用户起独立 MCP 实例
+> 并注入各自 cookie（见 `publisher/xiaohongshu.py` 顶部 NOTE）。② 公众号长文 → 小红书图文
+> 需要内容改写 + 配图（图文笔记至少 1 张图）；当前从成稿取标题+正文，图片需后续补齐。
+> ③ 浏览器自动化属平台 ToS 灰色地带，cookie 会过期、内容违规会封号，需向用户明示。
 ```

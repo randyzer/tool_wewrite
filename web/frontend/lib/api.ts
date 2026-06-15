@@ -89,6 +89,47 @@ export const createJob = (req: {
 
 export const getJob = (id: string) => apiGet<JobDetail>(`/api/jobs/${id}`);
 
+// ---- 多平台发布 ----
+export type PlatformStatus = {
+  id: string;
+  label: string;
+  login_kind: "api_key" | "qrcode" | "none";
+  supports_text: boolean;
+  supports_image: boolean;
+  supports_video: boolean;
+  available: boolean;
+  note: string;
+  logged_in: boolean;
+  user_name: string;
+};
+export type LoginChallenge = {
+  kind: string;
+  qrcode_image?: string | null;
+  challenge_id: string;
+  detail: string;
+};
+export type LoginStatusResp = { logged_in: boolean; detail: string; user_name: string };
+export type PublishResponse = { ok: boolean; platform: string; url: string; detail: string };
+export type NoteInput = {
+  title?: string;
+  content?: string;
+  images?: string[];
+  tags?: string[];
+  video?: string | null;
+};
+
+export const getPlatforms = () => apiGet<PlatformStatus[]>("/api/publish/platforms");
+export const startLogin = (platform: string) =>
+  apiSend<LoginChallenge>(`/api/publish/${platform}/login/start`, "POST");
+export const loginStatus = (platform: string) =>
+  apiGet<LoginStatusResp>(`/api/publish/${platform}/status`);
+export const logoutPlatform = (platform: string) =>
+  apiSend<LoginStatusResp>(`/api/publish/${platform}/login`, "DELETE");
+export const publishTo = (
+  platform: string,
+  payload: { job_id?: string; note?: NoteInput }
+) => apiSend<PublishResponse>(`/api/publish/${platform}`, "POST", payload);
+
 // 订阅任务进度。返回取消函数。
 export function streamJob(
   id: string,

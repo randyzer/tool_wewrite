@@ -15,6 +15,21 @@ from typing import Any, Optional
 
 
 @dataclass
+class PlatformLogin:
+    """某平台的登录态（cookie 加密存储）。
+
+    NOTE(多租户): cookie_enc 是按用户加密存放登录态的位置。参考实现 xiaohongshu-mcp
+    是单账号、cookie 存服务端的；要真正按用户隔离，需为每用户起独立 MCP 实例并把这里的
+    cookie 注入。logged_in 记录最近一次探测到的登录状态。
+    """
+
+    logged_in: bool = False
+    user_name: str = ""
+    cookie_enc: Optional[str] = None
+    updated_at: float = 0.0
+
+
+@dataclass
 class Account:
     user_id: str
     account_name: str = ""
@@ -26,10 +41,15 @@ class Account:
     wechat_appid_enc: Optional[str] = None
     wechat_secret_enc: Optional[str] = None
     wechat_author: str = ""
+    # 各平台登录态（小红书等）
+    platform_login: dict[str, PlatformLogin] = field(default_factory=dict)
 
     @property
     def wechat_bound(self) -> bool:
         return bool(self.wechat_appid_enc and self.wechat_secret_enc)
+
+    def login(self, platform: str) -> PlatformLogin:
+        return self.platform_login.setdefault(platform, PlatformLogin())
 
 
 @dataclass
