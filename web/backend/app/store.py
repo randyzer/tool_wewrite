@@ -57,6 +57,11 @@ class Job:
     id: str
     user_id: str
     prompt: str
+    kind: str = "generate"  # generate | distribute
+    # distribute job 专用
+    source_markdown: str = ""
+    target_platforms: list[str] = field(default_factory=list)
+    platform_versions: list[dict] = field(default_factory=list)
     interactive: bool = False
     theme: Optional[str] = None
     persona: Optional[str] = None

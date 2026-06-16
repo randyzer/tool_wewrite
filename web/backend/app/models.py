@@ -104,3 +104,29 @@ class PublishResponse(BaseModel):
     platform: str
     url: str = ""
     detail: str = ""
+
+
+class DistributeRequest(BaseModel):
+    """把一份源内容分发改写到多个平台。source_* 三选一。"""
+
+    source_job_id: Optional[str] = Field(default=None, description="从某 generate 任务成稿作源")
+    source_text: Optional[str] = Field(default=None, description="直接粘贴的源文本/markdown")
+    source_url: Optional[str] = Field(default=None, description="公众号文章 URL，后端抓取作源")
+    platforms: list[str] = Field(..., min_length=1, description="目标平台 id 列表")
+    persona: Optional[str] = None
+    theme: Optional[str] = None
+
+
+class PlatformVersion(BaseModel):
+    platform: str
+    label: str = ""
+    output_kind: str = "graphic_text"
+    title: str = ""
+    markdown: str = ""
+    images: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    humanness: Optional[float] = None
+    max_similarity: Optional[float] = None
+    passed: bool = True
+    warning: str = ""
+    status: str = "done"  # done | failed
