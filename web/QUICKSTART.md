@@ -41,6 +41,27 @@ cp .env.example .env
 > `ln -sfn "$PWD/web/backend/.venv" "$PWD/.venv"`（在仓库根执行）。
 > 不做也行 —— 那样 agent 用系统 `python3`，需系统装好根 `requirements.txt`。
 
+### 线上部署：LLM 走 relay（真 Claude）
+
+本地开发把 `ANTHROPIC_*` 三项都留空即可，用本机登录的 `claude` 凭证。**线上服务器**没有登录态，改走 relay，在服务器 `.env` 填：
+
+```bash
+ANTHROPIC_BASE_URL=https://relay.upthos.com   # relay 根，CLI 自动补 /v1/messages
+ANTHROPIC_AUTH_TOKEN=<有 Claude 权限的 relay key>   # 走 Authorization: Bearer
+WEWRITE_MODEL=claude-sonnet-4-6                # 管道 100+ 轮，Sonnet 比 Opus 快近半
+# ANTHROPIC_API_KEY 留空（与上面二选一，别同时设）
+```
+
+⚠️ relay 必须真正映射到 **Anthropic Claude**：用下面这条自检，响应 `model` 以 `claude` 开头才算通；若是 `gpt-*` 说明 relay 把 claude-* id 偷偷路由到了 GPT，SDK（Claude 专用）不可用。
+
+```bash
+curl -s https://relay.upthos.com/v1/messages \
+  -H "Content-Type: application/json" -H "anthropic-version: 2023-06-01" \
+  -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" \
+  -d '{"model":"claude-sonnet-4-6","max_tokens":16,"messages":[{"role":"user","content":"ping"}]}' \
+  | python3 -c "import sys,json;m=json.load(sys.stdin).get('model','');print('OK',m) if m.startswith('claude') else print('FAIL',m)"
+```
+
 ## 前端（终端 2）
 ```bash
 cd web/frontend

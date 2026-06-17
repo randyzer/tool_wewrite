@@ -92,8 +92,13 @@ def agent_env(settings: Settings, account: Account, *, theme: str) -> dict[str, 
     from .security import decrypt
 
     env: dict[str, str] = {}
+    # LLM 凭证：走 relay 时用 base_url + auth_token；否则用 api_key 或本机登录态。
     if settings.anthropic_api_key:
         env["ANTHROPIC_API_KEY"] = settings.anthropic_api_key
+    if settings.anthropic_auth_token:
+        env["ANTHROPIC_AUTH_TOKEN"] = settings.anthropic_auth_token
+    if settings.anthropic_base_url:
+        env["ANTHROPIC_BASE_URL"] = settings.anthropic_base_url
 
     # 平台图片密钥池：provider 与 key 必须成对注入。
     # 若只注入 provider 而 key 为空，Step 1 会误判 skip_image_gen=false，
