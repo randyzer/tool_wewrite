@@ -11,12 +11,15 @@ import {
   saveStyle,
   unbindWeChat,
 } from "@/lib/api";
+import { Badge, Button, Card, Input } from "@/components/ui";
+import { useToast } from "@/components/ui/Toast";
 
 export default function SettingsPage() {
   const [account, setAccount] = useState<AccountState | null>(null);
   const [personas, setPersonas] = useState<CatalogItem[]>([]);
   const [themes, setThemes] = useState<CatalogItem[]>([]);
   const [msg, setMsg] = useState("");
+  const toast = useToast();
 
   // style form
   const [accountName, setAccountName] = useState("");
@@ -58,8 +61,10 @@ export default function SettingsPage() {
       });
       setAccount(a);
       setMsg("风格已保存 ✓");
+      toast.notice("风格已保存");
     } catch (e) {
       setMsg("保存失败：" + String(e));
+      toast.error("保存失败：" + String(e));
     }
   }
 
@@ -71,8 +76,10 @@ export default function SettingsPage() {
       setAppid("");
       setSecret("");
       setMsg("公众号已绑定 ✓（appid/secret 已加密存储）");
+      toast.notice("公众号已绑定（appid/secret 已加密存储）");
     } catch (e) {
       setMsg("绑定失败：" + String(e));
+      toast.error("绑定失败：" + String(e));
     }
   }
 
@@ -82,27 +89,43 @@ export default function SettingsPage() {
       const a = await unbindWeChat();
       setAccount(a);
       setMsg("已解绑公众号");
+      toast.notice("已解绑公众号");
     } catch (e) {
       setMsg("解绑失败：" + String(e));
+      toast.error("解绑失败：" + String(e));
     }
   }
 
   return (
-    <>
-      <h1>设置</h1>
-      <p className="sub">配置一次，之后每篇文章自动沿用。</p>
-      {msg && <p className="ok">{msg}</p>}
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold text-text">设置</h1>
+        <p className="mt-1 text-sm text-muted">配置一次，之后每篇文章自动沿用。</p>
+      </div>
 
-      <div className="panel">
-        <h2>公众号风格</h2>
-        <div className="row">
-          <div>
-            <label>公众号名称</label>
-            <input value={accountName} onChange={(e) => setAccountName(e.target.value)} />
+      {msg && (
+        <p className="text-sm text-muted bg-surface-2 rounded-md px-3 py-2 border border-border">
+          {msg}
+        </p>
+      )}
+
+      <Card>
+        <h2 className="text-lg font-medium text-text mb-4">公众号风格</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-text">公众号名称</label>
+            <Input
+              value={accountName}
+              onChange={(e) => setAccountName(e.target.value)}
+            />
           </div>
-          <div>
-            <label>写作人格</label>
-            <select value={persona} onChange={(e) => setPersona(e.target.value)}>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-text">写作人格</label>
+            <select
+              value={persona}
+              onChange={(e) => setPersona(e.target.value)}
+              className="h-10 w-full rounded-md border border-border bg-surface-2 px-3 text-sm text-text"
+            >
               {personas.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.label} — {p.description}
@@ -110,11 +133,13 @@ export default function SettingsPage() {
               ))}
             </select>
           </div>
-        </div>
-        <div className="row">
-          <div>
-            <label>默认排版主题</label>
-            <select value={theme} onChange={(e) => setTheme(e.target.value)}>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-text">默认排版主题</label>
+            <select
+              value={theme}
+              onChange={(e) => setTheme(e.target.value)}
+              className="h-10 w-full rounded-md border border-border bg-surface-2 px-3 text-sm text-text"
+            >
               {themes.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.id}
@@ -123,60 +148,66 @@ export default function SettingsPage() {
               ))}
             </select>
           </div>
-          <div>
-            <label>目标读者（可选）</label>
-            <input
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-text">目标读者（可选）</label>
+            <Input
               value={audience}
               onChange={(e) => setAudience(e.target.value)}
               placeholder="如：关注 AI 的产品经理"
             />
           </div>
         </div>
-        <label>语气补充（可选）</label>
-        <input
-          value={tone}
-          onChange={(e) => setTone(e.target.value)}
-          placeholder="如：专业但不端着，多用具体例子"
-        />
-        <div style={{ marginTop: 16 }}>
-          <button className="btn" onClick={onSaveStyle}>
-            保存风格
-          </button>
+        <div className="mt-4 space-y-1">
+          <label className="text-sm font-medium text-text">语气补充（可选）</label>
+          <Input
+            value={tone}
+            onChange={(e) => setTone(e.target.value)}
+            placeholder="如：专业但不端着，多用具体例子"
+          />
         </div>
-      </div>
+        <div className="mt-4">
+          <Button variant="primary" onClick={onSaveStyle}>
+            保存风格
+          </Button>
+        </div>
+      </Card>
 
-      <div className="panel">
-        <h2>
-          微信公众号绑定{" "}
+      <Card>
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="text-lg font-medium text-text">微信公众号绑定</h2>
           {account?.wechat_bound ? (
-            <span className="badge done">已绑定</span>
+            <Badge tone="ok">已绑定</Badge>
           ) : (
-            <span className="badge">未绑定</span>
+            <Badge tone="neutral">未绑定</Badge>
           )}
-        </h2>
-        <p className="hint">
-          推送到<strong>你自己的</strong>公众号草稿箱需要你自己的 appid/secret —— 这是平台无法代为提供的唯一一项。
-          其余（LLM、AI 配图）均由平台统一承担，你无需任何配置。凭证将<strong>加密存储</strong>，仅在生成时临时注入。
+        </div>
+        <p className="text-sm text-muted mb-4">
+          推送到<strong className="text-text">你自己的</strong>公众号草稿箱需要你自己的 appid/secret —— 这是平台无法代为提供的唯一一项。
+          其余（LLM、AI 配图）均由平台统一承担，你无需任何配置。凭证将<strong className="text-text">加密存储</strong>，仅在生成时临时注入。
         </p>
         {account?.wechat_bound ? (
-          <div>
-            <p>
-              当前署名：<span className="ok">{account.wechat_author || "（未设置）"}</span>
+          <div className="space-y-3">
+            <p className="text-sm text-muted">
+              当前署名：<span className="text-text">{account.wechat_author || "（未设置）"}</span>
             </p>
-            <button className="btn danger" onClick={onUnbind}>
+            <Button variant="danger" onClick={onUnbind}>
               解绑公众号
-            </button>
+            </Button>
           </div>
         ) : (
-          <>
-            <div className="row">
-              <div>
-                <label>AppID</label>
-                <input value={appid} onChange={(e) => setAppid(e.target.value)} placeholder="wx..." />
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-text">AppID</label>
+                <Input
+                  value={appid}
+                  onChange={(e) => setAppid(e.target.value)}
+                  placeholder="wx..."
+                />
               </div>
-              <div>
-                <label>AppSecret</label>
-                <input
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-text">AppSecret</label>
+                <Input
                   type="password"
                   value={secret}
                   onChange={(e) => setSecret(e.target.value)}
@@ -184,16 +215,16 @@ export default function SettingsPage() {
                 />
               </div>
             </div>
-            <label>默认署名（可选）</label>
-            <input value={author} onChange={(e) => setAuthor(e.target.value)} />
-            <div style={{ marginTop: 16 }}>
-              <button className="btn" onClick={onBind} disabled={!appid || !secret}>
-                绑定公众号
-              </button>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-text">默认署名（可选）</label>
+              <Input value={author} onChange={(e) => setAuthor(e.target.value)} />
             </div>
-          </>
+            <Button variant="primary" onClick={onBind} disabled={!appid || !secret}>
+              绑定公众号
+            </Button>
+          </div>
         )}
-      </div>
-    </>
+      </Card>
+    </div>
   );
 }
