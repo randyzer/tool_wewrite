@@ -18,116 +18,17 @@
   --radius-lg: 14px;
 }
 
-body { position: relative; }  /* Base UI: iOS Safari 弹层修正 */
-
-:root {
-  --bg: #0f1115;
-  --panel: #171a21;
-  --panel-2: #1e222b;
-  --border: #2a2f3a;
-  --text: #e7e9ee;
-  --muted: #9aa3b2;
-  --accent: #4f8cff;
-  --accent-2: #2bd4a0;
-  --danger: #ff6b6b;
-}
-
 * { box-sizing: border-box; }
 
 html, body {
   margin: 0;
   padding: 0;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--color-bg);
+  color: var(--color-text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
     "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
   font-size: 15px;
   line-height: 1.6;
 }
 
-a { color: var(--accent); text-decoration: none; }
-
-.container { max-width: 1080px; margin: 0 auto; padding: 24px; }
-
-.topbar {
-  display: flex; align-items: center; justify-content: space-between;
-  border-bottom: 1px solid var(--border); padding: 14px 24px;
-}
-.brand { font-weight: 700; font-size: 18px; }
-.brand span { color: var(--accent); }
-.navlinks a { margin-left: 18px; color: var(--muted); }
-.navlinks a:hover { color: var(--text); }
-
-.panel {
-  background: var(--panel); border: 1px solid var(--border);
-  border-radius: 12px; padding: 20px; margin-bottom: 18px;
-}
-
-h1 { font-size: 26px; margin: 6px 0 4px; }
-h2 { font-size: 17px; margin: 0 0 14px; }
-.sub { color: var(--muted); margin-top: 0; }
-
-label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 6px; }
-
-textarea, input, select {
-  width: 100%; background: var(--panel-2); color: var(--text);
-  border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
-  font-size: 14px; font-family: inherit;
-}
-textarea { min-height: 84px; resize: vertical; }
-
-.row { display: flex; gap: 14px; flex-wrap: wrap; }
-.row > div { flex: 1; min-width: 180px; }
-
-.btn {
-  background: var(--accent); color: #fff; border: none; border-radius: 8px;
-  padding: 11px 18px; font-size: 14px; font-weight: 600; cursor: pointer;
-}
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn.secondary { background: var(--panel-2); border: 1px solid var(--border); color: var(--text); }
-.btn.danger { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
-
-.checkbox { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
-.checkbox input { width: auto; }
-
-.hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
-
-.log {
-  background: #0b0d11; border: 1px solid var(--border); border-radius: 8px;
-  padding: 14px; max-height: 360px; overflow: auto; font-size: 13px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-.log .line { padding: 2px 0; white-space: pre-wrap; word-break: break-word; }
-.log .tool { color: var(--accent-2); }
-.log .step { color: var(--accent); font-weight: 600; }
-.log .err { color: var(--danger); }
-.log .notice { color: #ffcf5c; }
-
-.badge {
-  display: inline-block; font-size: 12px; padding: 2px 9px; border-radius: 999px;
-  border: 1px solid var(--border); color: var(--muted);
-}
-.badge.running { color: var(--accent); border-color: var(--accent); }
-.badge.done { color: var(--accent-2); border-color: var(--accent-2); }
-.badge.error { color: var(--danger); border-color: var(--danger); }
-
-.preview-frame { width: 100%; height: 640px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
-
-.tabs { display: flex; gap: 8px; margin-bottom: 12px; }
-.tabs button { background: var(--panel-2); border: 1px solid var(--border); color: var(--muted);
-  border-radius: 8px; padding: 7px 14px; cursor: pointer; font-size: 13px; }
-.tabs button.active { color: var(--text); border-color: var(--accent); }
-
-pre.md { background: #0b0d11; border: 1px solid var(--border); border-radius: 8px;
-  padding: 16px; overflow: auto; max-height: 640px; white-space: pre-wrap; font-size: 13px; }
-
-.ok { color: var(--accent-2); }
-.warn { color: #ffcf5c; }
-
-.platform-versions { display: grid; gap: 12px; margin-top: 16px; }
-.version-card { border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
-.version-head { display: flex; gap: 8px; align-items: center; }
-.pv-badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; }
-.pv-badge.pv-ok { background: #163; color: #cfe; }
-.pv-badge.pv-warn { background: #531; color: #fda; }
-.version-md { white-space: pre-wrap; background: var(--panel-2); padding: 8px; border-radius: 6px; max-height: 360px; overflow: auto; }
+body { position: relative; }  /* Base UI: iOS Safari 弹层修正 */
