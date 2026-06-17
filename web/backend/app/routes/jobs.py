@@ -1,7 +1,6 @@
 """任务：创建 / 列表 / 详情 / SSE 进度流。"""
 from __future__ import annotations
 
-import asyncio
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, Query
