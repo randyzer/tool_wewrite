@@ -60,6 +60,37 @@ function rememberJob(id: string, kind: "generate" | "distribute") {
   try { localStorage.setItem("wewrite:job", JSON.stringify({ id, kind })); } catch {}
 }
 
+const GEN_NODES = ["环境检查", "选题", "框架 + 素材", "写作", "SEO + 反 AI", "配图", "排版 / 发布", "收尾"];
+const DIST_NODES = ["小红书", "抖音"];
+
+type NodeState = "done" | "active" | "failed" | "pending";
+
+function Stepper({ nodes }: { nodes: { label: string; state: NodeState }[] }) {
+  const GLYPH: Record<NodeState, string> = { done: "✓", active: "●", failed: "✕", pending: "○" };
+  const DOT: Record<NodeState, string> = {
+    done: "text-success",
+    active: "text-accent animate-pulse",
+    failed: "text-danger",
+    pending: "text-muted",
+  };
+  const LABEL: Record<NodeState, string> = {
+    done: "text-text",
+    active: "text-text font-medium",
+    failed: "text-danger",
+    pending: "text-muted",
+  };
+  return (
+    <ol className="space-y-1.5">
+      {nodes.map((n, i) => (
+        <li key={i} className="flex items-center gap-2 text-sm">
+          <span className={"w-4 text-center " + DOT[n.state]}>{GLYPH[n.state]}</span>
+          <span className={LABEL[n.state]}>{n.label}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export default function HomePage() {
   const [personas, setPersonas] = useState<CatalogItem[]>([]);
   const [themes, setThemes] = useState<CatalogItem[]>([]);
@@ -87,6 +118,8 @@ export default function HomePage() {
   const distCancelRef = useRef<(() => void) | null>(null);
 
   const toast = useToast();
+  const [showLog, setShowLog] = useState(false);
+  const [showDistLog, setShowDistLog] = useState(false);
 
   // History state
   const [jobs, setJobs] = useState<JobSummary[]>([]);
@@ -372,6 +405,30 @@ export default function HomePage() {
   const genElapsed = jobStartedAt == null ? null : running ? nowMs - jobStartedAt : jobEndedAt != null ? jobEndedAt - jobStartedAt : null;
   const distElapsed = distStartedAt == null ? null : distributing ? nowMs - distStartedAt : distEndedAt != null ? distEndedAt - distStartedAt : null;
 
+  // 节点级进度推导（用 agent 的 [N/8] / [改写] 标记）
+  const genCurrent = lines.reduce((max, l) => {
+    const m = l.text.match(/\[(\d)\/8\]/);
+    return m ? Math.max(max, Number(m[1])) : max;
+  }, 0);
+  const genDone = !running && result?.status === "done";
+  const genErrored = result?.status === "error";
+  function genNodeState(i1: number): NodeState {
+    if (genDone) return "done";
+    if (genErrored) return i1 < genCurrent ? "done" : i1 === genCurrent ? "failed" : "pending";
+    if (i1 < genCurrent) return "done";
+    if (i1 === genCurrent) return "active";
+    return "pending";
+  }
+  const distDone = !distributing && distResult?.status === "done";
+  const distErrored = distResult?.status === "error";
+  function distNodeState(label: string): NodeState {
+    const started = distLines.some((l) => l.text.includes("[改写]") && l.text.includes(label));
+    if (distDone) return "done";
+    if (distErrored) return started ? "failed" : "pending";
+    if (started) return distributing ? "active" : "done";
+    return "pending";
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -463,15 +520,25 @@ export default function HomePage() {
               </span>
             )}
           </div>
-          <div
-            ref={logRef}
-            className="h-64 overflow-y-auto rounded-md bg-surface-2 p-3 font-mono text-xs space-y-0.5"
-          >
-            {lines.map((l, i) => (
-              <div key={i} className={lineClass[l.kind] ?? "text-text"}>
-                {l.text}
+          <Stepper
+            nodes={GEN_NODES.map((label, i) => ({ label, state: genNodeState(i + 1) }))}
+          />
+          <div className="mt-3">
+            <Button variant="ghost" size="sm" onClick={() => setShowLog((v) => !v)}>
+              {showLog ? "收起详细日志" : "详细日志"}
+            </Button>
+            {showLog && (
+              <div
+                ref={logRef}
+                className="mt-2 h-64 overflow-y-auto rounded-md bg-surface-2 p-3 font-mono text-xs space-y-0.5"
+              >
+                {lines.map((l, i) => (
+                  <div key={i} className={lineClass[l.kind] ?? "text-text"}>
+                    {l.text}
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         </Card>
       )}
@@ -596,15 +663,25 @@ export default function HomePage() {
               </span>
             )}
           </div>
-          <div
-            ref={distLogRef}
-            className="h-48 overflow-y-auto rounded-md bg-surface-2 p-3 font-mono text-xs space-y-0.5"
-          >
-            {distLines.map((l, i) => (
-              <div key={i} className={lineClass[l.kind] ?? "text-text"}>
-                {l.text}
+          <Stepper
+            nodes={DIST_NODES.map((label) => ({ label: label + " 改写", state: distNodeState(label) }))}
+          />
+          <div className="mt-3">
+            <Button variant="ghost" size="sm" onClick={() => setShowDistLog((v) => !v)}>
+              {showDistLog ? "收起详细日志" : "详细日志"}
+            </Button>
+            {showDistLog && (
+              <div
+                ref={distLogRef}
+                className="mt-2 h-48 overflow-y-auto rounded-md bg-surface-2 p-3 font-mono text-xs space-y-0.5"
+              >
+                {distLines.map((l, i) => (
+                  <div key={i} className={lineClass[l.kind] ?? "text-text"}>
+                    {l.text}
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         </Card>
       )}
