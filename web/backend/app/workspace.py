@@ -41,17 +41,21 @@ def build_workspace(settings: Settings, account: Account, *, theme: str, persona
         Path(base).mkdir(parents=True, exist_ok=True)
     ws = Path(tempfile.mkdtemp(prefix="wewrite-job-", dir=base))
 
-    skill_dir = settings.skill_dir
-    for name in _LINK_ENTRIES:
-        src = skill_dir / name
-        if src.exists():
-            (ws / name).symlink_to(src)
+    # container 模式：skill 代码 ro 挂载到 /skill，软链由容器入口在容器内建（指向 /skill）；
+    # 宿主侧若建软链，挂载进容器后会变悬空（宿主绝对路径在容器内不存在）。
+    # direct 模式：直接进程内运行，正常 symlink 宿主 skill_dir。
+    if settings.runner != "container":
+        skill_dir = settings.skill_dir
+        for name in _LINK_ENTRIES:
+            src = skill_dir / name
+            if src.exists():
+                (ws / name).symlink_to(src)
 
-    # 预建的工具链 venv（含仓库根 requirements.txt 依赖）。
-    # SKILL.md 约定：python3 优先解析为 {skill_dir}/.venv/bin/python3（若存在）。
-    venv = skill_dir / ".venv"
-    if venv.exists():
-        (ws / ".venv").symlink_to(venv)
+        # 预建的工具链 venv（含仓库根 requirements.txt 依赖）。
+        # SKILL.md 约定：python3 优先解析为 {skill_dir}/.venv/bin/python3（若存在）。
+        venv = skill_dir / ".venv"
+        if venv.exists():
+            (ws / ".venv").symlink_to(venv)
 
     (ws / "output").mkdir()
     (ws / "history.yaml").write_text("articles: []\n", encoding="utf-8")

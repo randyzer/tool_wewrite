@@ -29,8 +29,12 @@ def setup_workspace_skill_links(ws: Path, skill: Path) -> None:
     """在容器内把 skill 只读代码软链进工作区。不链 .venv（用容器内 python）。"""
     for name in _SKILL_LINKS:
         src = skill / name
+        if not src.exists():
+            continue
         link = ws / name
-        if src.exists() and not link.exists():
+        if link.is_symlink():
+            link.unlink()  # 清掉宿主路径的（容器内悬空）软链，重指 /skill
+        if not link.exists():  # 没有真实文件/目录占位才建
             link.symlink_to(src)
     (ws / ".home").mkdir(exist_ok=True)
 

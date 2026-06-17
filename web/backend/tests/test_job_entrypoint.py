@@ -28,3 +28,16 @@ def test_emit_writes_jsonl(capsys):
     out = capsys.readouterr().out.strip()
     import json
     assert json.loads(out) == {"type": "log", "text": "hi"}
+
+def test_setup_skill_links_replaces_dangling(tmp_path):
+    mod = _load()
+    skill = tmp_path / "skill"; skill.mkdir()
+    (skill / "SKILL.md").write_text("real")
+    (skill / "toolkit").mkdir()
+    ws = tmp_path / "ws"; ws.mkdir()
+    # 模拟宿主 build_workspace 留下的、容器内悬空的软链
+    (ws / "SKILL.md").symlink_to(tmp_path / "nonexistent-host" / "SKILL.md")
+    mod.setup_workspace_skill_links(ws, skill)  # 不得抛 FileExistsError
+    assert (ws / "SKILL.md").is_symlink()
+    assert (ws / "SKILL.md").resolve() == (skill / "SKILL.md").resolve()
+    assert (ws / "toolkit").is_symlink()
