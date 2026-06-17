@@ -23,12 +23,16 @@ docker network create wewrite-jobs
 sudo bash web/backend/docker/firewall-jobs.sh wewrite-jobs
 ```
 
-## 4. 后端 .env（容器模式 + relay 真 Claude）
+## 4. 后端 .env（容器模式 + DeepSeek 直连编排【推荐】）
+
+DeepSeek 直接当编排器跑整条管道：实测 ~$0.04/篇 LLM 成本（比 Claude 便宜 ~130×）、完成度更干净、
+原生支持 WebSearch。`WEWRITE_WRITER_*` 留空 → 编排器自写（不走 llm_write.py 混合路由那一跳）。
 
 ```bash
-ANTHROPIC_BASE_URL=https://relay.upthos.com
-ANTHROPIC_AUTH_TOKEN=<有 Claude 权限的 relay key>
-WEWRITE_MODEL=claude-sonnet-4-6
+ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
+ANTHROPIC_AUTH_TOKEN=<DeepSeek key>
+# ANTHROPIC_API_KEY 留空
+WEWRITE_MODEL=deepseek-v4-pro
 WEWRITE_RUNNER=container
 WEWRITE_MAX_CONCURRENT_JOBS=3
 WEWRITE_MAX_PER_USER_JOBS=1
@@ -41,12 +45,15 @@ WEWRITE_IMAGE_MODEL=gpt-image-2
 APP_SECRET_KEY=<Fernet key>
 ```
 
+> 生图仍走 relay `WEWRITE_IMAGE_*`(gpt-image-2)，与 LLM 端点无关、三种编排方案都一样。
+> 切回 Claude 编排（relay 真 Claude）：`ANTHROPIC_BASE_URL=https://relay.upthos.com` +
+> `ANTHROPIC_AUTH_TOKEN=<有 Claude 权限的 relay key>` + `WEWRITE_MODEL=claude-sonnet-4-6`；
+> 验证 relay 真 Claude（响应 model 以 claude 开头）见 web/QUICKSTART.md。线上已备份回退文件 `.env.bak.relay-claude`。
+
 生成 `APP_SECRET_KEY`：
 ```bash
 web/backend/.venv/bin/python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
-
-验证 relay 真 Claude（响应 model 以 claude 开头）：见 web/QUICKSTART.md 的自检 curl。
 
 ## 5. 起服务 + 自检
 
@@ -63,7 +70,8 @@ curl -s localhost:8000/api/health   # runner=container, runner_ready=true
 
 ```bash
 docker run --rm --network wewrite-jobs curlimages/curl -m 5 http://169.254.169.254 || echo "OK: 元数据被堵"
-docker run --rm --network wewrite-jobs curlimages/curl -m 5 https://relay.upthos.com >/dev/null && echo "OK: 公网可达"
+docker run --rm --network wewrite-jobs curlimages/curl -m 5 https://api.deepseek.com >/dev/null && echo "OK: LLM 端点可达"
+docker run --rm --network wewrite-jobs curlimages/curl -m 5 https://relay.upthos.com >/dev/null && echo "OK: 生图端点可达"
 ```
 
 ## 7. 已知限制 / 运维注意（P1）

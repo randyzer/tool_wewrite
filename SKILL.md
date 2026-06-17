@@ -187,14 +187,17 @@ python3 {skill_dir}/scripts/seo_keywords.py --json {关键词}
 
 ### Step 4: 写作
 
+> **🔴 本步写作模式默认是「委托写作模型」（详见 4.4）**：你负责编排——定框架、备真实素材锚点、组装 brief、打分驱动改写；**正文由 `scripts/llm_write.py` 出稿，不是你亲手写**。只有该工具 exit 3 / 4（未配/失败）时才回退到自己写。下面 4.1-4.3 读取的文件是**给 brief 备料**，读完别顺手就开始写文章。
+
 ```
+读取: {skill_dir}/references/anti-ai-writing-system.md
 读取: {skill_dir}/references/writing-guide.md
 读取: {skill_dir}/playbook.md（如果存在，按 confidence 分级执行）
 读取: {skill_dir}/history.yaml（最近 3 篇的 dimensions + closing_type 字段）
 读取: {skill_dir}/references/exemplars/index.yaml（如果存在）
 ```
 
-（writing-guide.md 是反 AI 写作底线规则，**未读取前不得开始写作**；它在 Step 4-5 期间保持驻留，Step 5.2 校验仍按其编号规则 1.1-3.2 检查，中途不要丢弃重读。）
+（anti-ai-writing-system.md 是出稿前必须逐条记住的**写作契约**——内联自写与 llm_write.py 共用、实测能把 composite 压到 <30；writing-guide.md 是其背后的详细 Tier 规则。两者**未读取前不得开始写作**，且在 Step 4-5 期间保持驻留，Step 5.2 校验仍按 writing-guide.md 的编号规则 1.1-3.2 检查，中途不要丢弃重读。）
 
 **4.1 维度随机化**：
 
@@ -269,20 +272,23 @@ Category 映射规则：
 
 建库命令：`python3 {skill_dir}/scripts/extract_exemplar.py article.md`
 
-**4.4 写文章**：
+**4.4 写文章** —— 本步只产出 `output/article.md`。
 
-**先判断写作模式**——检查是否配置了写作模型：`env | grep -q '^WEWRITE_WRITER_API_KEY='`。
+**🔴 默认走"委托写作模型"这条主路径，别上来就自己写。你的角色是编排，不是执笔。**
 
-- **配了 → 混合路由（你当编排，把生成委托给写作模型）**：把下面"写作规范"里的全部要求 + 4.1 维度 + 4.2 人格要点 + 4.3 范文风格片段 + Step 3 框架大纲 + **Step 3.2 采到的真实素材锚点（具体数字/工具名/价格/案例——必须写进 brief；写作模型只在给定事实上组织语言，严禁编造任何数字或事实）** + 目标字数 + 可用容器语法 + 编辑锚点要求，组装成一份 brief 写到 `output/_brief.md`，然后调：
-  ```bash
-  python3 {skill_dir}/scripts/llm_write.py --brief output/_brief.md --output output/article.md
-  ```
-  - 工具 stdout 只回摘要（字数/token）。**不要 cat / 读取 output/article.md 全文**——靠 Step 5 的脚本评分驱动改写，正文不进你的上下文（这是混合路由省钱的关键；只有 Step 5 的 Tier-3 终检允许读一次全文）。
-  - 退出码 3（未配置）或 4（调用失败）→ 当作没配，走下面"自己写"。
-  - 跳过 4.5（快速自检对你没写的稿不适用），直接进 Step 5。
-- **没配（或工具失败）→ 自己写**：按下面"写作规范"直接把文章写进 `{skill_dir}/output/{date}-{slug}.md`，并执行 4.5。
+1. 把【Step 3 框架大纲 + **Step 3.2 的真实素材锚点（具体数字/工具名/价格/案例——必须逐条写进去；写作模型只在给定事实上组织语言，严禁编造任何数字或事实）** + 4.1 维度 + 4.2 人格要点 + 4.3 范文风格片段 + 下面"写作规范"的全部要求 + 目标字数 + 可用容器语法 + 编辑锚点要求】组装成一份 brief，写到 `output/_brief.md`。
+2. 调用写作工具（**这一步必做，不要跳过去自己写**）：
+   ```bash
+   python3 {skill_dir}/scripts/llm_write.py --brief output/_brief.md --output output/article.md
+   ```
+3. 按**退出码**处理：
+   - **exit 0**（stdout 是 JSON 摘要）→ 正文已写入 `output/article.md`。**不要 cat / 读取全文**（靠 Step 5 评分驱动改写，正文不进你的上下文——这是省钱命门；只有 Step 5.2 的 Tier-3 终检允许读一次全文）。**跳过 4.5**，直接进 Step 5。
+   - **exit 3**（未配写作模型）或 **exit 4**（调用失败）→ 这时才走下面的"自己写"。
 
-**写作规范**（自己写时直接执行；混合路由时这些就是 brief 的内容要求）：
+**自己写**（仅当上面工具 exit 3 / 4 时）：按"写作规范"把正文写进 `output/article.md`，并执行 4.5。
+
+**写作规范**（自己写时直接执行；委托写作模型时这些就是 brief 的内容要求）：
+- **🔴 出稿契约**：严格按 `references/anti-ai-writing-system.md` 的反 AI 写作铁律**逐条满足**（句长强烈交替 / 段落长短交替 / 杜绝 AI 腔词 / 事实零编造 / 情绪有起伏 / 少副词 / 口语化自我修正 / 不堆整齐小标题），违反任一条直接重写。这是把 composite 压到 <30 的关键，下面的细则与之一致。
 - H1 标题（20-28 字） + H2 结构，1500-2500 字
 - **素材 + 增强约束**：Step 3.2 的素材和增强材料分散嵌入各 H2 段落。增强策略的核心输出（角度/密度要点/细节/用户声音）必须贯穿全文，不只装饰性出现一次
 - **写作人格**：按 4.2 加载的人格参数写作（数据呈现方式、个人声音浓度、不确定性表达等）
@@ -292,7 +298,7 @@ Category 映射规则：
 - 2-3 个编辑锚点：`<!-- ✏️ 编辑建议：在这里加一句你自己的经历/看法 -->`
 - 可选容器语法：`:::dialogue`、`:::timeline`、`:::callout`、`:::quote`、`:::highlight`（琥珀高亮框）、`:::summary`（青色总结框）
 
-保存到 `{skill_dir}/output/{date}-{slug}.md`
+保存到 `{skill_dir}/output/article.md`（全流程统一用这个工作文件名；委托写作模型与自己写都写这里）
 
 **4.5 快速自检**（写完后立即执行，减少 Step 5 重写概率）：
 
@@ -449,7 +455,7 @@ python3 {skill_dir}/toolkit/cli.py preview {markdown} --theme {theme} --no-open 
   title: "{标题}"
   topic_source: "热点抓取"  # 或 "用户指定"
   topic_keywords: ["{词1}", "{词2}"]
-  output_file: "{output 文件路径}"  # e.g. output/2026-03-31-zhangxue-slow-accumulation.md
+  output_file: "output/article.md"  # 全流程统一工作文件名
   framework: "{框架}"
   enhance_strategy: "{增强策略}"  # angle_discovery/density_boost/detail_anchoring/real_feel
   word_count: {字数}

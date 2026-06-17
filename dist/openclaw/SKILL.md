@@ -178,14 +178,17 @@ python3 {baseDir}/scripts/seo_keywords.py --json {关键词}
 
 ### Step 4: 写作
 
+> **🔴 本步写作模式默认是「委托写作模型」（详见 4.4）**：你负责编排——定框架、备真实素材锚点、组装 brief、打分驱动改写；**正文由 `scripts/llm_write.py` 出稿，不是你亲手写**。只有该工具 exit 3 / 4（未配/失败）时才回退到自己写。下面 4.1-4.3 读取的文件是**给 brief 备料**，读完别顺手就开始写文章。
+
 ```
+读取: {baseDir}/references/anti-ai-writing-system.md
 读取: {baseDir}/references/writing-guide.md
 读取: {baseDir}/playbook.md（如果存在，按 confidence 分级执行）
 读取: {baseDir}/history.yaml（最近 3 篇的 dimensions + closing_type 字段）
 读取: {baseDir}/references/exemplars/index.yaml（如果存在）
 ```
 
-（writing-guide.md 是反 AI 写作底线规则，**未读取前不得开始写作**；它在 Step 4-5 期间保持驻留，Step 5.2 校验仍按其编号规则 1.1-3.2 检查，中途不要丢弃重读。）
+（anti-ai-writing-system.md 是出稿前必须逐条记住的**写作契约**——内联自写与 llm_write.py 共用、实测能把 composite 压到 <30；writing-guide.md 是其背后的详细 Tier 规则。两者**未读取前不得开始写作**，且在 Step 4-5 期间保持驻留，Step 5.2 校验仍按 writing-guide.md 的编号规则 1.1-3.2 检查，中途不要丢弃重读。）
 
 **4.1 维度随机化**：
 
@@ -260,7 +263,23 @@ Category 映射规则：
 
 建库命令：`python3 {baseDir}/scripts/extract_exemplar.py article.md`
 
-**4.4 写文章**：
+**4.4 写文章** —— 本步只产出 `output/article.md`。
+
+**🔴 默认走"委托写作模型"这条主路径，别上来就自己写。你的角色是编排，不是执笔。**
+
+1. 把【Step 3 框架大纲 + **Step 3.2 的真实素材锚点（具体数字/工具名/价格/案例——必须逐条写进去；写作模型只在给定事实上组织语言，严禁编造任何数字或事实）** + 4.1 维度 + 4.2 人格要点 + 4.3 范文风格片段 + 下面"写作规范"的全部要求 + 目标字数 + 可用容器语法 + 编辑锚点要求】组装成一份 brief，写到 `output/_brief.md`。
+2. 调用写作工具（**这一步必做，不要跳过去自己写**）：
+   ```bash
+   python3 {baseDir}/scripts/llm_write.py --brief output/_brief.md --output output/article.md
+   ```
+3. 按**退出码**处理：
+   - **exit 0**（stdout 是 JSON 摘要）→ 正文已写入 `output/article.md`。**不要 cat / 读取全文**（靠 Step 5 评分驱动改写，正文不进你的上下文——这是省钱命门；只有 Step 5.2 的 Tier-3 终检允许读一次全文）。**跳过 4.5**，直接进 Step 5。
+   - **exit 3**（未配写作模型）或 **exit 4**（调用失败）→ 这时才走下面的"自己写"。
+
+**自己写**（仅当上面工具 exit 3 / 4 时）：按"写作规范"把正文写进 `output/article.md`，并执行 4.5。
+
+**写作规范**（自己写时直接执行；委托写作模型时这些就是 brief 的内容要求）：
+- **🔴 出稿契约**：严格按 `references/anti-ai-writing-system.md` 的反 AI 写作铁律**逐条满足**（句长强烈交替 / 段落长短交替 / 杜绝 AI 腔词 / 事实零编造 / 情绪有起伏 / 少副词 / 口语化自我修正 / 不堆整齐小标题），违反任一条直接重写。这是把 composite 压到 <30 的关键，下面的细则与之一致。
 - H1 标题（20-28 字） + H2 结构，1500-2500 字
 - **素材 + 增强约束**：Step 3.2 的素材和增强材料分散嵌入各 H2 段落。增强策略的核心输出（角度/密度要点/细节/用户声音）必须贯穿全文，不只装饰性出现一次
 - **写作人格**：按 4.2 加载的人格参数写作（数据呈现方式、个人声音浓度、不确定性表达等）
@@ -270,7 +289,7 @@ Category 映射规则：
 - 2-3 个编辑锚点：`<!-- ✏️ 编辑建议：在这里加一句你自己的经历/看法 -->`
 - 可选容器语法：`:::dialogue`、`:::timeline`、`:::callout`、`:::quote`、`:::highlight`（琥珀高亮框）、`:::summary`（青色总结框）
 
-保存到 `{baseDir}/output/{date}-{slug}.md`
+保存到 `{baseDir}/output/article.md`（全流程统一用这个工作文件名；委托写作模型与自己写都写这里）
 
 **4.5 快速自检**（写完后立即执行，减少 Step 5 重写概率）：
 
@@ -298,6 +317,8 @@ LLM 自行完成，不需要调用脚本。
 **5.1 SEO**：3 个备选标题 + 摘要（≤40 字）+ 5 标签 + 关键词密度优化
 
 **5.2 质量验证**（两个维度，每项逐一检查）：
+
+> **混合路由模式下**（Step 4.4 走了 llm_write.py）：A. 写作质量（Tier 1/2）交给 5.3 的脚本程序化把关，**不用逐句读**。你只需**读一次 `output/article.md` 全文**做 B. 内容质量 + 真实锚定/具体性（Tier-3）的终检——**这是你唯一一次把正文读进上下文**，据此给出 5.3 的 `agent_tier3_score`。自己写的模式下，A、B 都按下面逐项查。
 
 **A. 写作质量**（writing-guide.md 基础规则）：
 
@@ -335,8 +356,12 @@ python3 {baseDir}/scripts/humanness_score.py {article_path} --json --tier3 {agen
 
 解读 JSON 中 `composite_score`（0=质量高, 100=问题多）：
 - < 30 → 通过，继续 Step 6
-- 30-50 → 查看 `param_scores` 中最低分的 1-2 项，只修复对应的具体句子（不重写整段），改完重新打分**恰好 1 次**。这一轮之后，只要分数仍 < 50 就直接进入 Step 6——**不得追加第 2 轮**（实测追加轮次常使分数不降反升，纯属浪费）
-- \> 50 → 取 `param_scores` 最低的 2-3 项，逐项定向修复（每项只改最相关的 1-2 处），重新打分。**最多 2 轮**，且任一轮一旦 < 50 或较上一轮没有改善就立即停；仍 > 50 则标记 DONE_WITH_CONCERNS 继续
+- 30-50 → 看 `param_scores` 最低的 1-2 项做定向修复，重新打分**恰好 1 次**；之后只要 < 50 就进 Step 6，**不得追加第 2 轮**（实测追加常使分数不降反升）
+- \> 50 → 取最低的 2-3 项定向修复，**最多 2 轮**；任一轮 < 50 或较上一轮无改善即停；仍 > 50 标 DONE_WITH_CONCERNS 继续
+
+**「定向修复」按模式分**：
+- **自己写模式**：直接编辑 `output/article.md` 里不达标的具体句子（不重写整段，每轮最多改 3 处）。
+- **混合路由模式**：**不要手改全文**。把「上一稿分数 + 最弱的 1-3 个 param + 具体改写要求（如"句长再拉开差距、第2段太整齐拆短句、补 X 处真实数据"）」追加写进 `output/_brief.md`，重新调 `python3 {baseDir}/scripts/llm_write.py --brief output/_brief.md --output output/article.md` 重生成，再打分。除 5.2 的那一次 Tier-3 终检外，仍不把正文读进上下文。
 
 ---
 
@@ -421,7 +446,7 @@ python3 {baseDir}/toolkit/cli.py preview {markdown} --theme {theme} --no-open -o
   title: "{标题}"
   topic_source: "热点抓取"  # 或 "用户指定"
   topic_keywords: ["{词1}", "{词2}"]
-  output_file: "{output 文件路径}"  # e.g. output/2026-03-31-zhangxue-slow-accumulation.md
+  output_file: "output/article.md"  # 全流程统一工作文件名
   framework: "{框架}"
   enhance_strategy: "{增强策略}"  # angle_discovery/density_boost/detail_anchoring/real_feel
   word_count: {字数}
