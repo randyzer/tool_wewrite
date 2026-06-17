@@ -14,6 +14,7 @@ def test_docker_args_security_flags(monkeypatch, tmp_path):
                                      "WEWRITE_MODEL": "claude-sonnet-4-6"})
     joined = " ".join(args)
     assert args[:3] == ["docker", "run", "--rm"]
+    assert "--user" in args  # 以宿主属主身份跑，避免挂载工作区写权限问题
     assert "--cap-drop" in args and "ALL" in args
     assert "--security-opt" in args and "no-new-privileges" in args
     assert "--read-only" in args

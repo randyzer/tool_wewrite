@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from pathlib import Path
 
 from ..config import Settings
@@ -21,6 +22,9 @@ class ContainerRunner:
         s = self._settings
         args = [
             "docker", "run", "--rm", "-i",
+            # 以宿主属主身份跑 —— 工作区是宿主挂载的目录，否则镜像内 uid 10001 无权写。
+            # 仍是非 root（后端服务账号本身非 root），镜像内 USER runner 是无 --user 时的兜底。
+            "--user", f"{os.getuid()}:{os.getgid()}",
             "--network", s.job_network,
             "--cpus", str(s.job_cpus),
             "--memory", s.job_memory,
