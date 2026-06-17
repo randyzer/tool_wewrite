@@ -15,7 +15,14 @@ def _repo_root_guess() -> Path:
 class Settings:
     def __init__(self) -> None:
         self.anthropic_api_key: str = os.environ.get("ANTHROPIC_API_KEY", "")
-        self.model: str = os.environ.get("WEWRITE_MODEL", "claude-opus-4-8")
+        # 走第三方 relay/网关调模型时填这两项：base_url 指向网关根（CLI 会自动补 /v1/messages），
+        # auth_token 走 Authorization: Bearer。两者留空 → 用本机登录的 claude 凭证（本地开发默认）。
+        # 注意：relay 必须真正映射到 Anthropic Claude；只代理 GPT 的网关不可用（SDK 是 Claude 专用）。
+        self.anthropic_base_url: str = os.environ.get("ANTHROPIC_BASE_URL", "")
+        self.anthropic_auth_token: str = os.environ.get("ANTHROPIC_AUTH_TOKEN", "")
+        # 默认走 Sonnet：管道 100+ 轮，Sonnet 单轮延迟远低于 Opus，端到端可省近半时间。
+        # 质量优先可用 WEWRITE_MODEL=claude-opus-4-8 覆盖。
+        self.model: str = os.environ.get("WEWRITE_MODEL", "claude-sonnet-4-6")
 
         # 平台图片密钥池
         self.image_provider: str = os.environ.get("WEWRITE_IMAGE_PROVIDER", "")
