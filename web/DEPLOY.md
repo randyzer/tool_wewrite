@@ -41,9 +41,16 @@ WEWRITE_IMAGE_MODEL=gpt-image-2
 APP_SECRET_KEY=<Fernet key>
 ```
 
+生成 `APP_SECRET_KEY`：
+```bash
+web/backend/.venv/bin/python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
 验证 relay 真 Claude（响应 model 以 claude 开头）：见 web/QUICKSTART.md 的自检 curl。
 
 ## 5. 起服务 + 自检
+
+> 以下命令都从**仓库根**执行（路径都是相对仓库根的；先 `cd /path/to/wewrite`）。
 
 ```bash
 web/backend/.venv/bin/uvicorn app.main:app --app-dir web/backend --env-file web/backend/.env --host 127.0.0.1 --port 8000
