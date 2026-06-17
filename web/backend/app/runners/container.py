@@ -28,7 +28,7 @@ class ContainerRunner:
             "--cap-drop", "ALL",
             "--security-opt", "no-new-privileges",
             "--read-only",
-            "--tmpfs", "/tmp",
+            "--tmpfs", "/tmp:size=512m",
             "-e", "HOME=/workspace/.home",
             "-v", f"{ws}:/workspace",
             "-v", f"{s.skill_dir}:/skill:ro",
@@ -62,15 +62,24 @@ class ContainerRunner:
         proc = await asyncio.create_subprocess_exec(
             *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
 
-        async def pump() -> None:
+        async def pump_stdout() -> None:
             assert proc.stdout is not None
             async for raw in proc.stdout:
                 ev = self._parse_event_line(raw.decode("utf-8", "replace"))
                 if ev is not None:
                     emit(ev)
 
+        async def drain_stderr() -> bytes:
+            assert proc.stderr is not None
+            return await proc.stderr.read()
+
+        # 并发抽干 stdout(事件流) 与 stderr —— 否则 stderr 写满管道(~64KB)会把容器卡在
+        # write() 上、stdout 再也不 EOF，白白耗尽整个超时预算。
         try:
-            await asyncio.wait_for(pump(), timeout=settings.job_timeout)
+            _, stderr_bytes = await asyncio.wait_for(
+                asyncio.gather(pump_stdout(), drain_stderr()),
+                timeout=settings.job_timeout,
+            )
         except asyncio.TimeoutError:
             proc.kill()
             await proc.wait()
@@ -78,8 +87,5 @@ class ContainerRunner:
 
         rc = await proc.wait()
         if rc != 0:
-            err = b""
-            if proc.stderr is not None:
-                err = await proc.stderr.read()
-            tail = err.decode("utf-8", "replace").strip()[-500:]
+            tail = stderr_bytes.decode("utf-8", "replace").strip()[-500:]
             raise RuntimeError(f"任务容器非零退出（code={rc}）：{tail}")
