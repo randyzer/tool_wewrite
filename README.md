@@ -3,7 +3,7 @@
 公众号内容全流程 AI Skill —— 从热点抓取到草稿箱推送，一句话搞定；每个环节也能单独调用。
 
 安装后对你的 Agent 说「写一篇公众号文章」跑完整管道，或者只要哪步用哪步：
-`/wewrite-topic` 出选题、`/wewrite-visual` 配封面、`/wewrite-review` 查 AI 味、
+`/wewrite-topic` 出选题、`/wewrite-visual` 配封面、`/wewrite-review` 做质量自检、
 `/wewrite-rewrite` 一稿改写成小红书/抖音版。兼容 Claude Code、OpenClaw、Codex，
 以及任何支持 Agent Skills 规范的宿主。
 
@@ -23,11 +23,11 @@
 | 你说 | 激活 | 产出 |
 |------|------|------|
 | 今天写什么 / 找几个选题 | `wewrite-topic` | 10 个评分排序的选题 |
-| 就这个选题写一篇 | `wewrite-write` | 反 AI 初稿 + 编辑锚点 |
-| 检查一下 / 有没有 AI 味 | `wewrite-review` | 生成档案 + 逐句改进建议 |
+| 就这个选题写一篇 | `wewrite-write` | 像真人写的初稿 + 编辑锚点 |
+| 检查一下 / 这篇怎么样 | `wewrite-review` | 生成档案 + 逐句改进建议 |
 | 给这篇配个封面 | `wewrite-visual` | 封面 + 内文配图 .png |
 | 推到草稿箱 / 换个主题 | `wewrite-publish` | 微信草稿 / 本地 HTML |
-| 改写成小红书 / 抖音版 | `wewrite-rewrite` | 过原创度+反AI双门的平台版本 |
+| 改写成小红书 / 抖音版 | `wewrite-rewrite` | 内容级真改的平台版本（过原创度质量门） |
 | 学习我的修改 / 导入范文 | `wewrite-learn` | playbook 规则 / 风格库 |
 | 看看文章数据 | `wewrite-stats` | 阅读数据回填 + 选题建议 |
 | 重新设置风格 | `wewrite-style` | style.yaml |
@@ -121,8 +121,8 @@ cp config.example.yaml ~/.wewrite/config.yaml
 | 素材采集 | WebSearch 真实数据/引述/案例，禁止编造 | wewrite-write |
 | 框架生成 | 7 套写作骨架（痛点/故事/清单/对比/热点解读/纯观点/复盘） | wewrite-write |
 | 内容增强 | 按框架类型自动匹配：角度发现/密度强化/细节锚定/真实体感 | wewrite-write |
-| 反 AI 写作 | 写作契约（句长交替/情绪起伏/口语修正）+ 维度随机化 + 分段实时自检 | wewrite-write |
-| 反 AI 评分 | 11 项统计检测，0-1 连续分 | `wewrite score` |
+| 拟人写作 | 写作契约（句长交替/情绪起伏/口语修正）+ 维度随机化 + 分段实时自检 | wewrite-write |
+| 质量评分 | 11 项统计检测（句长方差/词汇丰富度/情绪起伏…），0-1 连续分 | `wewrite score` |
 | SEO 优化 | 标题策略 / 摘要 / 关键词 / 标签 | wewrite-review |
 | 视觉 AI | 封面 3 创意 + 内文 3-6 配图，风格锚定全文一致 | `wewrite image-gen` |
 | 排版发布 | 16+ 主题 + 微信兼容修复 + 暗黑模式 | `wewrite preview/publish` |
@@ -224,7 +224,7 @@ wewrite themes     # 列出主题名称
 wewrite preview article.md --theme sspai            # Markdown → 微信 HTML 预览
 wewrite publish article.md --cover cover.png --title "标题"   # 推送草稿箱
 wewrite image-post p1.jpg p2.jpg -t "周末探店"       # 小绿书/图片帖（横滑轮播）
-wewrite score article.md --verbose                  # 反 AI 评分（11 项检测）
+wewrite score article.md --verbose                  # 写作质量评分（11 项检测）
 wewrite hotspots --limit 20                         # 抓热点
 wewrite seo --json "AI大模型" "科技股"               # SEO 分析
 wewrite exemplar article.md / --list                # 范文风格库
@@ -243,8 +243,8 @@ wewrite/
 │   ├── wewrite/                # 主入口：路由 + 全流程编排（Step 1/8 内联，Step 2-7 调模块）
 │   ├── wewrite-style/          # 风格设置 / Onboard（onboard.md、style-template.md、style.example.yaml）
 │   ├── wewrite-topic/          # 选题（topic-selection.md）
-│   ├── wewrite-write/          # 框架 + 素材 + 反 AI 写作（writing-guide、frameworks、personas/ 7 人格…）
-│   ├── wewrite-review/         # SEO + 编辑自评 + 反 AI 评分 + 自检报告（seo-rules.md）
+│   ├── wewrite-write/          # 框架 + 素材 + 写作（writing-guide、frameworks、personas/ 7 人格…）
+│   ├── wewrite-review/         # SEO + 编辑自评 + 质量评分 + 自检报告（seo-rules.md）
 │   ├── wewrite-visual/         # 封面 + 内文配图（visual-prompts.md、cover-prompts.md）
 │   ├── wewrite-publish/        # 排版 + 发布 + 主题画廊 + 小绿书（wechat-constraints.md）
 │   ├── wewrite-learn/          # 学习修改 / 导入范文 / 学排版（learn-edits.md）
