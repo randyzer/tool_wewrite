@@ -6,7 +6,7 @@
 
 ```bash
 # 1. 克隆仓库并安装（wewrite CLI + 状态迁移）
-git clone --depth 1 https://github.com/imraywang/wewrite-platform.git ~/.codex/skills/wewrite
+git clone --depth 1 https://github.com/imraywang/wewrite.git ~/.codex/skills/wewrite
 cd ~/.codex/skills/wewrite && bash install.sh
 
 # 2. 安装 Codex 自定义 prompt（把 {skill_dir} 替换成本仓库路径，写入 ~/.codex/prompts/）

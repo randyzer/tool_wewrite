@@ -18,7 +18,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 REPO="$(pwd)"
 
-GIT_SRC="git+https://github.com/imraywang/wewrite-platform.git"
+GIT_SRC="git+https://github.com/imraywang/wewrite.git"
 SRC="$REPO"
 [ -f "$REPO/pyproject.toml" ] || SRC="$GIT_SRC"
 
