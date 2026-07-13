@@ -18,9 +18,10 @@ set -euo pipefail
 cd "$(dirname "$0")"
 REPO="$(pwd)"
 
-GIT_SRC="git+https://github.com/imraywang/wewrite.git"
+# 本地仓库（有 pyproject）从本地装最新代码；dist 拷贝等场景装 PyPI 发布版
+PYPI_SRC="wewrite"
 SRC="$REPO"
-[ -f "$REPO/pyproject.toml" ] || SRC="$GIT_SRC"
+[ -f "$REPO/pyproject.toml" ] || SRC="$PYPI_SRC"
 
 # ---- 1) wewrite CLI ----
 echo "→ 安装 wewrite CLI（来源: $SRC）..."
@@ -40,7 +41,7 @@ else
   if [ -f "$REPO/pyproject.toml" ]; then
     .venv/bin/python -m pip install -e "$REPO"
   else
-    .venv/bin/python -m pip install "$GIT_SRC"
+    .venv/bin/python -m pip install "$PYPI_SRC"
   fi
   mkdir -p "$HOME/.local/bin"
   ln -sfn "$REPO/.venv/bin/wewrite" "$HOME/.local/bin/wewrite"

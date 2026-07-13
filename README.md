@@ -8,7 +8,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/imraywang/wewrite/blob/main/LICENSE)
 [![Build](https://github.com/imraywang/wewrite/actions/workflows/build-openclaw.yml/badge.svg)](https://github.com/imraywang/wewrite/actions)
-[![Version](https://img.shields.io/badge/version-3.2.0-059669)](https://github.com/imraywang/wewrite/blob/main/VERSION)
+[![PyPI](https://img.shields.io/pypi/v/wewrite?color=059669&label=PyPI)](https://pypi.org/project/wewrite/)
 [![Skills](https://img.shields.io/badge/skills-1%20主入口%20%2B%209%20模块-8b5cf6)](#-模块速查)
 [![Themes](https://img.shields.io/badge/themes-16%20%2B%20learn--theme-f59e0b)](#-排版引擎)
 [![Agents](https://img.shields.io/badge/Claude%20Code%20·%20Codex%20·%20OpenClaw-supported-6366f1)](#-快速开始)
@@ -79,7 +79,7 @@ cd ~/wewrite && bash install.sh
 npx skills add imraywang/wewrite
 ```
 
-skill 目录自包含、复制即用；CLI 另装一条：`uv tool install git+https://github.com/imraywang/wewrite.git`。
+skill 目录自包含、复制即用；CLI 另装一条：`uv tool install wewrite`（或 `pipx install wewrite`）。
 
 ### 方式三：让 AI 自己装
 
