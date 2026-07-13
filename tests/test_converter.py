@@ -507,3 +507,23 @@ class TestCodeBlockEnhancement:
             classes = code.get("class", [])
             if any(c.startswith("language-") for c in classes):
                 assert pre.get("data-lang") is not None
+
+
+class TestContainerInlineMarkdown:
+    """Inline md inside containers must render (pre-rendered HTML skips the md pass)."""
+
+    def test_timeline_bold_renders(self):
+        conv = WeChatConverter(theme=load_theme("professional-clean", THEMES_DIR))
+        md = ":::timeline\n**第 1 周** 磨合期\n**第 2 周** 上升期\n:::"
+        html = conv.convert(md).html
+        assert "**" not in html
+        # 后续管线会给 strong 注入 darkmode 属性，只断言标签与内容
+        assert "<strong" in html and "第 1 周" in html
+
+    def test_callout_and_quote_inline(self):
+        conv = WeChatConverter(theme=load_theme("professional-clean", THEMES_DIR))
+        md = ":::callout tip\n用 `wewrite score` 查 **质量**\n:::\n\n:::quote\n*慢* 就是 **快**\n:::"
+        html = conv.convert(md).html
+        assert "**" not in html and "`" not in html
+        assert "<strong" in html and "质量" in html
+        assert "<em" in html and "慢" in html and "<code" in html

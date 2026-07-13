@@ -412,6 +412,24 @@ class WeChatConverter:
 
     # -- Container block syntax --
 
+    _INLINE_CODE_RE = re.compile(r"`([^`\n]+?)`")
+    _INLINE_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
+    _INLINE_EM_RE = re.compile(r"(?<!\*)\*([^*\n]+?)\*(?!\*)")
+
+    def _inline_md(self, text: str) -> str:
+        """Render inline Markdown (code/bold/em) inside container content.
+
+        Containers are pre-rendered to raw HTML before the Markdown pass, and
+        python-markdown skips inline syntax inside HTML blocks — so `**bold**`
+        etc. would otherwise appear literally in the output.
+        """
+        text = self._INLINE_CODE_RE.sub(
+            r'<code style="background: rgba(0,0,0,0.06); padding: 2px 5px; '
+            r'border-radius: 3px; font-size: 0.9em">\1</code>', text)
+        text = self._INLINE_BOLD_RE.sub(r"<strong>\1</strong>", text)
+        text = self._INLINE_EM_RE.sub(r"<em>\1</em>", text)
+        return text
+
     def _preprocess_containers(self, text: str) -> str:
         """Pre-process :::container blocks into styled HTML before Markdown parsing.
 
@@ -444,11 +462,11 @@ class WeChatConverter:
                     # Right-aligned (reply) bubble
                     msg = line[2:].strip()
                     bubbles.append(f'<section style="display: flex; justify-content: flex-end; margin-bottom: 12px">'
-                                   f'<section style="background: {primary}; color: white; padding: 10px 14px; border-radius: 12px 12px 2px 12px; max-width: 80%; font-size: 15px; line-height: 1.6">{msg}</section></section>')
+                                   f'<section style="background: {primary}; color: white; padding: 10px 14px; border-radius: 12px 12px 2px 12px; max-width: 80%; font-size: 15px; line-height: 1.6">{self._inline_md(msg)}</section></section>')
                 else:
                     # Left-aligned bubble
                     bubbles.append(f'<section style="display: flex; justify-content: flex-start; margin-bottom: 12px">'
-                                   f'<section style="background: #f3f4f6; color: #333; padding: 10px 14px; border-radius: 12px 12px 12px 2px; max-width: 80%; font-size: 15px; line-height: 1.6">{line}</section></section>')
+                                   f'<section style="background: #f3f4f6; color: #333; padding: 10px 14px; border-radius: 12px 12px 12px 2px; max-width: 80%; font-size: 15px; line-height: 1.6">{self._inline_md(line)}</section></section>')
             return '\n'.join(bubbles)
 
         return re.sub(r':::dialogue\n(.*?)\n:::', replace_dialogue, text, flags=re.DOTALL)
@@ -471,7 +489,7 @@ class WeChatConverter:
                     f'<section style="width: 10px; height: 10px; border-radius: 50%; background: {primary}; margin-top: 6px"></section>'
                     f'<section style="width: 2px; flex: 1; background: #e5e7eb; margin-top: 4px"></section>'
                     f'</section>'
-                    f'<section style="flex: 1; padding-left: 12px; padding-bottom: 8px; font-size: 15px; line-height: 1.7">{line}</section>'
+                    f'<section style="flex: 1; padding-left: 12px; padding-bottom: 8px; font-size: 15px; line-height: 1.7">{self._inline_md(line)}</section>'
                     f'</section>'
                 )
             return '\n'.join(items)
@@ -497,7 +515,7 @@ class WeChatConverter:
             return (f'<section style="background: {bg}; border-left: 4px solid {color}; '
                     f'padding: 14px 16px; border-radius: 4px; margin: 16px 0; font-size: 15px; line-height: 1.7">'
                     f'<section style="font-weight: 700; color: {color}; margin-bottom: 6px">{icon} {ctype.upper()}</section>'
-                    f'{content}</section>')
+                    f'{self._inline_md(content)}</section>')
 
         return re.sub(r':::callout\s+(\w+)\n(.*?)\n:::', replace_callout, text, flags=re.DOTALL)
 
@@ -510,7 +528,7 @@ class WeChatConverter:
             return (f'<section style="margin: 24px 0; padding: 20px 24px; border-left: 4px solid {primary}; '
                     f'background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); border-radius: 0 8px 8px 0">'
                     f'<section style="font-size: 18px; line-height: 1.8; color: #333; font-style: italic">'
-                    f'"{content}"</section></section>')
+                    f'"{self._inline_md(content)}"</section></section>')
 
         return re.sub(r':::quote\n(.*?)\n:::', replace_quote, text, flags=re.DOTALL)
 
@@ -537,9 +555,9 @@ class WeChatConverter:
             html = (f'<section style="margin: 24px 0; padding: 20px 24px; background: {highlight_bg}; '
                     f'border: 1px solid {highlight_border}; border-radius: 6px;">')
             if title:
-                html += f'<p style="margin: 0;"><strong style="color: {secondary};">{title}</strong></p>'
+                html += f'<p style="margin: 0;"><strong style="color: {secondary};">{self._inline_md(title)}</strong></p>'
             if body:
-                html += f'<p style="margin: 8px 0 0 0;">{body}</p>'
+                html += f'<p style="margin: 8px 0 0 0;">{self._inline_md(body)}</p>'
             html += '</section>'
             return html
 
@@ -558,9 +576,9 @@ class WeChatConverter:
             body = lines[1].strip() if len(lines) > 1 else ""
             html = (f'<section style="margin: 24px 0; padding: 20px 24px; background: {summary_bg}; '
                     f'border: 1px solid {summary_border}; border-radius: 6px;">')
-            html += f'<p style="margin: 0;"><strong style="color: {primary};">{title}</strong></p>'
+            html += f'<p style="margin: 0;"><strong style="color: {primary};">{self._inline_md(title)}</strong></p>'
             if body:
-                html += f'<p style="margin: 8px 0 0 0;">{body}</p>'
+                html += f'<p style="margin: 8px 0 0 0;">{self._inline_md(body)}</p>'
             html += '</section>'
             return html
 

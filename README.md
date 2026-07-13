@@ -37,6 +37,25 @@
 - **一稿多发**：小红书图文 / 抖音口播稿，内容级真改，过原创度与拟人度双质量门。
 - **成本可控**：可选把正文出稿路由给写作模型（DeepSeek，约 $0.04/篇），编排与判断留给你的 Agent。
 
+## 👀 效果预览
+
+同一篇示例文章（[docs/demo-article.md](docs/demo-article.md)）× 6 个主题，`wewrite preview` 真实渲染长图（含 callout / timeline / quote / summary 组件与 AIGC 声明脚注）：
+
+<table>
+<tr>
+<td width="33%" align="center"><img src="docs/screenshots/professional-clean.png" width="250"><br><sub><b>professional-clean（默认）</b></sub></td>
+<td width="33%" align="center"><img src="docs/screenshots/sspai.png" width="250"><br><sub><b>sspai</b></sub></td>
+<td width="33%" align="center"><img src="docs/screenshots/warm-editorial.png" width="250"><br><sub><b>warm-editorial</b></sub></td>
+</tr>
+<tr>
+<td width="33%" align="center"><img src="docs/screenshots/tech-modern.png" width="250"><br><sub><b>tech-modern</b></sub></td>
+<td width="33%" align="center"><img src="docs/screenshots/bauhaus.png" width="250"><br><sub><b>bauhaus</b></sub></td>
+<td width="33%" align="center"><img src="docs/screenshots/midnight.png" width="250"><br><sub><b>midnight</b></sub></td>
+</tr>
+</table>
+
+> 全部 16 个主题：装好后 `wewrite gallery` 在浏览器里并排对比 + 一键复制。
+
 ## ✅ 适合 / ❌ 不适合
 
 **✅ 适合**：公众号创作者的日常出稿（热点文/干货文/故事文/测评文）· 只想要某个环节的人（选题灵感、封面配图、质量自检、排版发布）· 想把已有文章一稿多发到小红书/抖音 · 想让 AI 逐渐学会自己文风的长期使用者。
