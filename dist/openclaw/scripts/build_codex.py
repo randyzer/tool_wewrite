@@ -68,7 +68,10 @@ def transform_body(body: str) -> str:
 
 
 def build_prompt() -> str:
-    text = (REPO_ROOT / "SKILL.md").read_text(encoding="utf-8")
+    # v2.0: source is modular (skills/); reuse build_openclaw's merge to get
+    # the monolithic SKILL.md text, then apply Codex-specific transforms.
+    from build_openclaw import merge_monolith
+    text = merge_monolith()
     _, body = split_frontmatter(text)
     transformed = transform_body(body)
     # Sanity: SKILL.md must be harness-agnostic — no BARE task-tool *call* line

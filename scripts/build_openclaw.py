@@ -2,8 +2,18 @@
 """
 Build OpenClaw-compatible SKILL.md from Claude Code source.
 
+Since v2.0 the Claude Code source is modular (skills/wewrite + skills/wewrite-*);
+OpenClaw is a single-SKILL.md harness, so this build merges the modules back
+into one monolithic SKILL.md (main entry with module bodies inlined at the
+`<!-- wewrite:inline-* -->` markers, per-module standalone boilerplate stripped).
+
+The build also regenerates the repo-root SKILL.md as a committed artifact —
+the Claude-flavor monolith (no OpenClaw transforms). It exists for consumers
+that need a single file at the repo root: the web backend (pipeline.py reads
+it; workspaces symlink it) and legacy v1.x whole-repo skill installs.
+
 Usage:
-    python3 scripts/build_openclaw.py              # output to dist/openclaw/
+    python3 scripts/build_openclaw.py              # dist/openclaw/ + root SKILL.md
     python3 scripts/build_openclaw.py -o /tmp/oc   # custom output dir
 """
 
@@ -13,6 +23,27 @@ import shutil
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+SKILLS_DIR = REPO_ROOT / "skills"
+
+# Module merge order: pipeline bodies replace the inline-pipeline marker
+# (between Step 1 and Step 8), aux bodies replace the inline-aux marker (end).
+PIPELINE_MODULES = ["wewrite-topic", "wewrite-write", "wewrite-review",
+                    "wewrite-visual", "wewrite-publish"]
+AUX_MODULES = ["wewrite-style", "wewrite-learn", "wewrite-stats", "wewrite-rewrite"]
+
+STANDALONE_RE = re.compile(
+    r"<!-- wewrite:standalone-start -->.*?<!-- wewrite:standalone-end -->\n?", re.S)
+MODULAR_RE = re.compile(
+    r"<!-- wewrite:modular-start -->.*?<!-- wewrite:modular-end -->\n?", re.S)
+
+# The modular main entry resolves {root} via a per-skill symlink; the merged
+# monolith is one file at the repo root, so restore the classic convention.
+PATH_NOTE_MODULAR = (
+    "**路径约定**：本文档中 `{root}` 指 WeWrite 仓库根目录 = `{skill_dir}/root`"
+    "（本 skill 目录内指向仓库根的符号链接）。references/ 文档中的 `{skill_dir}` "
+    "一律指 `{root}`（历史约定）。"
+)
+PATH_NOTE_MERGED = "**路径约定**：本文档中 `{skill_dir}` 指本 SKILL.md 所在的目录（即 WeWrite 的根目录）。"
 
 # Directories to copy alongside SKILL.md
 COPY_DIRS = ["references", "scripts", "toolkit", "personas"]
@@ -85,9 +116,73 @@ def split_frontmatter(text: str) -> tuple[str, str]:
     return fm, body
 
 
+def _demote_headings(body: str) -> str:
+    """Demote every heading one level so module H1s nest under the main entry.
+
+    Fenced code blocks are skipped — bash comments also start with '#'.
+    """
+    out, in_fence = [], False
+    for line in body.split("\n"):
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+        elif not in_fence and re.match(r"#{1,5} ", line):
+            line = "#" + line
+        out.append(line)
+    return "\n".join(out)
+
+
+def module_body(name: str) -> str:
+    """Module SKILL.md body: frontmatter + standalone boilerplate stripped."""
+    text = (SKILLS_DIR / name / "SKILL.md").read_text(encoding="utf-8")
+    _, body = split_frontmatter(text)
+    body = STANDALONE_RE.sub("", body)
+    return _demote_headings(body.strip())
+
+
+def merge_monolith() -> str:
+    """Merge skills/wewrite + module bodies into one monolithic SKILL.md text."""
+    text = (SKILLS_DIR / "wewrite" / "SKILL.md").read_text(encoding="utf-8")
+    fm, body = split_frontmatter(text)
+    if PATH_NOTE_MODULAR not in body:
+        raise SystemExit(
+            "build: 路径约定 line drifted in skills/wewrite/SKILL.md — "
+            "update PATH_NOTE_MODULAR in build_openclaw.py")
+    body = body.replace(PATH_NOTE_MODULAR, PATH_NOTE_MERGED)
+    body = MODULAR_RE.sub("", body)
+    for marker in ("<!-- wewrite:inline-pipeline -->", "<!-- wewrite:inline-aux -->"):
+        if marker not in body:
+            raise SystemExit(f"build: marker {marker} missing in skills/wewrite/SKILL.md")
+    pipeline = "\n\n---\n\n".join(module_body(m) for m in PIPELINE_MODULES)
+    aux = ("## 辅助模块\n\n（上方「路由」表中的模块名对应本节下方的同名小节，"
+           "命中路由后直接执行对应小节）\n\n"
+           + "\n\n---\n\n".join(module_body(m) for m in AUX_MODULES))
+    body = body.replace("<!-- wewrite:inline-pipeline -->", pipeline)
+    body = body.replace("<!-- wewrite:inline-aux -->", "---\n\n" + aux)
+    body = body.replace("{root}", "{skill_dir}")
+    return f"---\n{fm}\n---\n\n{body.lstrip()}"
+
+
+GENERATED_BANNER = (
+    "<!-- ⚠️ 生成文件：由 scripts/build_openclaw.py 从 skills/ 合并生成（merge_monolith）。"
+    "请改 skills/ 下的模块源文件，不要直接编辑本文件。 -->\n\n"
+)
+
+
+def write_root_monolith() -> Path:
+    """Regenerate the repo-root SKILL.md artifact (Claude flavor, banner added)."""
+    text = merge_monolith()
+    fm, body = split_frontmatter(text)
+    out = REPO_ROOT / "SKILL.md"
+    out.write_text(f"---\n{fm}\n---\n\n{GENERATED_BANNER}{body.lstrip()}",
+                   encoding="utf-8")
+    return out
+
+
 def build(output_dir: Path):
-    skill_src = REPO_ROOT / "SKILL.md"
-    text = skill_src.read_text(encoding="utf-8")
+    root_skill = write_root_monolith()
+    print(f"  SKILL.md（根目录生成产物）→ {root_skill}")
+
+    text = merge_monolith()
 
     fm, body = split_frontmatter(text)
     fm = transform_frontmatter(fm)

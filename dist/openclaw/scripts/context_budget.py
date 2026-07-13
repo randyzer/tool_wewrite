@@ -2,10 +2,12 @@
 """
 Measure the doc-context load of a normal full WeWrite pipeline run (issue #16).
 
-Parses SKILL.md for happy-path `读取:` directives, sums the sizes of the
-reference docs a normal generate-an-article run loads, and reports
-lines / chars / estimated tokens. Doubles as a CI regression guard so
-SKILL.md cannot silently re-bloat (e.g. re-adding wechat-constraints.md).
+Since v2.0 the skill is modular: a full run loads the main entry
+(skills/wewrite/SKILL.md) plus the five pipeline module SKILL.mds. This
+script sums those files and the happy-path `读取:` reference docs they load,
+and reports lines / chars / estimated tokens. Doubles as a CI regression
+guard so the pipeline cannot silently re-bloat (e.g. re-adding
+wechat-constraints.md).
 
 Usage:
     python3 scripts/context_budget.py                      # human table
@@ -24,21 +26,32 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # (auxiliary / conditional / fallback / dev-reference). Everything else
 # matched in a 读取 directive is treated as ON_PATH.
 AUXILIARY = {
-    "onboard.md",          # first-run / 重新设置风格 only
-    "learn-edits.md",      # 学习我的修改
-    "effect-review.md",    # 看看文章数据
+    "onboard.md",          # first-run / 重新设置风格 only (wewrite-style)
+    "learn-edits.md",      # 学习我的修改 (wewrite-learn)
+    "effect-review.md",    # 看看文章数据 (wewrite-stats)
+    "multiplatform-rewrite.md",  # 多平台改写 (wewrite-rewrite)
     "style-template.md",   # only referenced inside onboard.md
     "exemplar-seeds.yaml",  # fallback when exemplar library empty
-    "commands.md",         # auxiliary command dispatch (created in a later task)
+    "pipeline-state.md",   # maintainer contract doc, not loaded at runtime
     "compliance-seo.md",   # orphan / dev-reference
     "cover-prompts.md",    # orphan / dev-reference
-    "wechat-constraints.md",  # demoted to dev-reference in a later task
+    "wechat-constraints.md",  # dev-reference (key limits inlined in wewrite-publish)
 }
+
+# A normal full run loads the main entry + the five pipeline modules.
+PIPELINE_SKILLS = [
+    "skills/wewrite/SKILL.md",
+    "skills/wewrite-topic/SKILL.md",
+    "skills/wewrite-write/SKILL.md",
+    "skills/wewrite-review/SKILL.md",
+    "skills/wewrite-visual/SKILL.md",
+    "skills/wewrite-publish/SKILL.md",
+]
 
 # Step 4.2 always loads exactly one persona; midnight-friend is the default.
 DEFAULT_PERSONA = "personas/midnight-friend.yaml"
 
-LOAD_RE = re.compile(r"读取:\s*\{skill_dir\}/(references/[\w./-]+\.(?:md|yaml))")
+LOAD_RE = re.compile(r"读取:\s*\{(?:skill_dir|root)\}/(references/[\w./-]+\.(?:md|yaml))")
 
 
 def parse_onpath_refs(skill_md_text: str) -> list:
@@ -61,11 +74,16 @@ def _stats(path: Path) -> tuple:
 
 
 def measure(skill_dir: Path) -> dict:
-    skill_md = skill_dir / "SKILL.md"
     entries = []
-    l, c = _stats(skill_md)
-    entries.append({"name": "SKILL.md", "lines": l, "chars": c})
-    for rel in parse_onpath_refs(skill_md.read_text(encoding="utf-8")):
+    onpath_refs = []
+    for rel in PIPELINE_SKILLS:
+        skill_md = skill_dir / rel
+        l, c = _stats(skill_md)
+        entries.append({"name": rel, "lines": l, "chars": c})
+        for ref in parse_onpath_refs(skill_md.read_text(encoding="utf-8")):
+            if ref not in onpath_refs:
+                onpath_refs.append(ref)
+    for rel in onpath_refs:
         p = skill_dir / rel
         if p.exists():
             l, c = _stats(p)

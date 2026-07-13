@@ -9,15 +9,15 @@ from context_budget import parse_onpath_refs, measure  # noqa: E402
 def test_parse_onpath_excludes_auxiliary():
     sample = (
         "读取: {skill_dir}/references/frameworks.md\n"
-        "读取: {skill_dir}/references/onboard.md\n"
-        "读取: {skill_dir}/references/writing-guide.md\n"
-        "读取: {skill_dir}/references/commands.md\n"
+        "读取: {root}/references/onboard.md\n"
+        "读取: {root}/references/writing-guide.md\n"
+        "读取: {root}/references/pipeline-state.md\n"
     )
     refs = parse_onpath_refs(sample)
     assert "references/frameworks.md" in refs
     assert "references/writing-guide.md" in refs
     assert "references/onboard.md" not in refs
-    assert "references/commands.md" not in refs
+    assert "references/pipeline-state.md" not in refs
 
 
 def test_parse_dedupes_and_preserves_order():
@@ -32,4 +32,5 @@ def test_measure_reports_peak_on_real_repo():
     repo = Path(__file__).resolve().parent.parent
     r = measure(repo)
     assert r["peak_tokens"] > 0
-    assert any(e["name"] == "SKILL.md" for e in r["entries"])
+    assert any(e["name"] == "skills/wewrite/SKILL.md" for e in r["entries"])
+    assert any(e["name"] == "skills/wewrite-write/SKILL.md" for e in r["entries"])

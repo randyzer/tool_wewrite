@@ -11,17 +11,18 @@
 
 ---
 
-# WeWrite — 公众号文章全流程
+# WeWrite — 公众号内容主入口
 
 ## 行为声明
 
-**角色**：用户的公众号内容编辑 Agent。
+**角色**：用户的公众号内容编辑 Agent。本入口做两件事：**路由**（辅助命令分发到
+wewrite-* 模块）和**编排**（主管道 8 步按序跑完）。
 
 **模式**：
 - **默认全自动**——一口气跑完 Step 1-8，不中途停下。只在出错时停。
 - **交互模式**——用户说"交互模式"/"我要自己选"时，在选题/框架/配图处暂停。
 
-**降级原则**：每一步都有降级方案。Step 1 检测到的降级标记（`skip_publish`、`skip_image_gen`）在后续 Step 自动生效，不重复报错。
+**降级原则**：每一步都有降级方案。Step 1 检测到的降级标记（`skip_publish`、`skip_image_gen`）写入 `output/_state.yaml`，后续模块自动生效，不重复报错。
 
 **进度追踪**：**若 harness 提供 task 工具（如 TaskCreate）**，主管道启动时为 8 个 Step 创建任务，每步 in_progress→completed；**否则**每进入一步发一行 `[N/8] 步骤名` 文本进度。无论哪种，都必须把 8 步走完——编号清单是排序骨架，不依赖特定工具。
 
@@ -37,53 +38,60 @@
 
 **Python 解释器约定**：本文档所有 `python3` 命令优先解析为 `{skill_dir}/.venv/bin/python3`（若该文件存在），否则回退系统 `python3`。venv 由 `install.sh` 创建，用于隔离依赖并绕过 macOS Homebrew Python 的 PEP 668 限制。
 
-**Onboard 例外**：Onboard 是交互式的（需要问用户问题），不受"全自动"约束。Onboard 完成后回到全自动管道。
+**管道状态**：跨模块状态统一落盘 `{skill_dir}/output/_state.yaml`，契约见 `{skill_dir}/references/pipeline-state.md`。主管道开新一篇文章时重置该文件（保留当天有效的 `flags`）。
 
-**辅助功能 / 非管道命令**（按需加载）：用户发出"选题→发布"主流程之外的命令——重新设置风格 / 学习我的修改 / 学习排版 / 导入范文·学习这篇文章 / 查看范文库 / 看看文章数据 / 主题画廊 / 小绿书 / 更新 / 检查一下·自检——时 → `读取: {skill_dir}/references/commands.md`，按其中「触发词 → 动作」表执行。
+**Onboard 例外**：Onboard（wewrite-style）是交互式的（需要问用户问题），不受"全自动"约束。Onboard 完成后回到全自动管道。
+
+---
+
+## 路由（非管道命令）
+
+用户发出"选题→发布"主流程之外的命令时，分发到对应模块，不进主管道：
+
+| 用户说 | 模块 | 说明 |
+|--------|------|------|
+| 重新设置风格 / 修改配置 | `wewrite-style` | onboard / 重设 style.yaml |
+| 只要选题 / 今天写什么 | `wewrite-topic` | 10 个评分选题 |
+| 检查一下 / 自检 / 有没有 AI 味 | `wewrite-review` | 自检报告（只诊断不改） |
+| 封面 / 配图相关 | `wewrite-visual` | 生成/重生成图片 |
+| 排版 / 预览 / 主题画廊 / 换主题 / 小绿书 / 推草稿箱 | `wewrite-publish` | 排版发布与主题 |
+| 学习我的修改 / 学排版 / 导入范文 / 查看范文库 | `wewrite-learn` | 自学习飞轮 |
+| 看看文章数据 / 效果复盘 | `wewrite-stats` | 拉数据 + 回填 + 建议 |
+| 改写成小红书 / 抖音版 / 多平台分发 | `wewrite-rewrite` | 一源多平台改写 |
+| 更新 / 更新 WeWrite / 升级 | （就地执行）在 `{skill_dir}` 执行 `git pull origin main`，完成后告知版本变化 | |
+
 
 ---
 
 ## 主管道（Step 1-8）
 
-主管道是固定的 8 个 Step（下面逐节展开）：
+主管道是固定的 8 个 Step：
 
 ```
 [1/8] 环境 + 配置   [2/8] 选题   [3/8] 框架 + 素材   [4/8] 写作
 [5/8] SEO + 验证   [6/8] 视觉 AI   [7/8] 排版 + 发布   [8/8] 收尾
 ```
 
-**进度追踪（按行为声明）**：若有 task 工具，为这 8 步建任务并逐步更新；否则每进入一步发一行 `[N/8] 步骤名`。两种方式都必须跑完 8 步。
-
----
+Step 1、8 由本入口执行；Step 2-7 由 5 个管道模块承担，状态经 `output/_state.yaml` 传递，模块间不停顿（交互模式除外）。
 
 ### Step 1: 环境 + 配置
 
-**1.1 环境检查**（静默通过或引导修复）：
+**1.1 环境 + 配置自检**（**一条命令拿全部降级标记**，别再逐项手查/逐个读文件）：
 
 ```bash
 # 优先用 venv 解释器（PEP 668 环境下依赖装在 .venv 里）；后续所有 python3 调用同此规则
 PY="{skill_dir}/.venv/bin/python3"; [ -x "$PY" ] || PY="python3"
-"$PY" -c "import markdown, bs4, cssutils, requests, yaml, pygments, PIL" 2>&1
+"$PY" {skill_dir}/scripts/diagnose.py --json
 ```
 
-| 检查项 | 通过 | 不通过 |
-|--------|------|--------|
-| `config.yaml` 存在 | 静默 | 引导创建，或设 `skip_publish = true` |
-| Python 依赖 | 静默 | 引导执行 `bash {skill_dir}/install.sh`（自动建 .venv 装依赖，解决 macOS PEP 668 报错）；若环境无此限制也可 `pip install -r requirements.txt` |
-| `wechat.appid` + `secret` | 静默 | 设 `skip_publish = true` |
-| `image.api_key` 或 `image.providers` 至少一项有效 | 静默 | 设 `skip_image_gen = true` |
-| `references/exemplars/index.yaml` | 静默 | 提示："范文库为空。如果你有已发布的文章（markdown），可以说**'导入范文'**建立风格库，写出来的文章会更像你。没有也不影响使用。" |
+读返回 JSON 的 `flags` 与 `summary`（diagnose 已涵盖依赖检查 + config/env 双源识别，不必再单独 import 测试或读 config.yaml）：
+- `flags.skip_publish` / `flags.skip_image_gen` / `flags.use_writer_model` → 连同 `diagnosed_at: 今天` 写入 `output/_state.yaml` 的 `flags`，后续模块自动遵守。
+- `summary.failures > 0`（依赖缺失）→ 引导 `bash {skill_dir}/install.sh`（建 .venv 装依赖，解决 macOS PEP 668）；否则静默继续。
+- 若 `files.exemplars` 为空可顺带提示一次"可说**'导入范文'**建风格库"，不阻断。
 
-**1.2 版本检查**（静默通过或提醒）：
+**1.2 版本检查**（仅本地交互式 skill 安装；云端/容器跳过）：
 
-```bash
-cd {skill_dir} && git fetch origin main --quiet 2>/dev/null
-```
-
-比对本地 `{skill_dir}/VERSION` 与远程 `git show origin/main:VERSION`：
-- 相同 → 静默通过
-- 不同 → 提示用户："WeWrite 有新版本可用（当前 X → 最新 Y），说「更新」即可升级。"**不阻断流程**，继续 1.3
-- git 不可用（无 .git 目录或 fetch 失败）→ 静默跳过
+`{skill_dir}` 是 git 仓库（存在 `.git`）且当前是交互式使用时，才比对本地 `VERSION` 与 `git show origin/main:VERSION`，不同则提示"说「更新」升级"（不阻断）。**容器/云端部署没有 `.git`、也不该让 agent 自更新（更新走重新部署）→ 直接跳过本步，不要跑 git 命令。**
 
 **1.3 加载风格**：
 
@@ -92,15 +100,15 @@ cd {skill_dir} && git fetch origin main --quiet 2>/dev/null
 ```
 
 - 存在 → 提取 `name`、`topics`、`tone`、`voice`、`blacklist`、`theme`、`cover_style`、`author`、`content_style`
-- 不存在 → `读取: {skill_dir}/references/onboard.md`，完成后回到 Step 1
+- 不存在 → 激活 `wewrite-style`（onboard），完成后回到 Step 1
 
-如果用户直接给了选题 → 跳到 Step 3（仍需框架选择和素材采集，不可跳过）。
+**1.4 重置管道状态**：开新一篇文章 → 重置 `output/_state.yaml`（保留 `flags`）。
+如果用户直接给了选题 → 写入 `topic`（`source: "用户指定"`），跳过 [2/8] 直达 [3/8]（仍需框架选择和素材采集，不可跳过）。
 
----
+## wewrite-topic — 选题
 
-### Step 2: 选题
 
-**2.1 热点抓取**：
+### 2.1 热点抓取
 
 ```bash
 python3 {skill_dir}/scripts/fetch_hotspots.py --limit 30
@@ -108,7 +116,7 @@ python3 {skill_dir}/scripts/fetch_hotspots.py --limit 30
 
 **降级**：脚本报错 → web_search "今日热点 {topics第一个垂类}"
 
-**2.2 历史分析 + SEO**：
+### 2.2 历史分析 + SEO
 
 ```
 读取: {skill_dir}/history.yaml（不存在则跳过）
@@ -125,7 +133,7 @@ python3 {skill_dir}/scripts/seo_keywords.py --json {关键词}
 
 **降级**：SEO 脚本报错 → LLM 判断；history 无 stats → 跳过效果分析，仅做去重
 
-**2.3 生成选题**：
+### 2.3 生成选题
 
 ```
 读取: {skill_dir}/references/topic-selection.md
@@ -138,9 +146,19 @@ python3 {skill_dir}/scripts/seo_keywords.py --json {关键词}
 每个选题含标题、评分、点击率潜力、SEO 友好度、推荐框架。
 
 - 自动模式 → 选最高分
-- 交互模式 → 展示全部，等用户选
+- 交互模式 / 单独激活 → 展示全部，等用户选
+
+### 完成
+
+把选定选题写入 `output/_state.yaml`：`topic.title`、`topic.keywords`、
+`topic.source: "热点抓取"`、`topic.framework_hint`（推荐框架），`steps_done` 追加 `topic`。
+单独激活且用户只要选题列表时，展示 10 个选题即可；用户选定后写入状态并提示
+"可以直接说'就写这个'进入写作（wewrite-write）"。
 
 ---
+
+## wewrite-write — 框架 + 素材 + 写作
+
 
 ### Step 3: 框架 + 素材
 
@@ -150,7 +168,8 @@ python3 {skill_dir}/scripts/seo_keywords.py --json {关键词}
 读取: {skill_dir}/references/frameworks.md
 ```
 
-7 套框架（痛点/故事/清单/对比/热点解读/纯观点/复盘），自动选推荐指数最高的。
+7 套框架（痛点/故事/清单/对比/热点解读/纯观点/复盘），自动选推荐指数最高的
+（`topic.framework_hint` 与 history 表现加权参与推荐）。
 
 **3.2 素材采集 + 内容增强**（合并执行，共用搜索结果）：
 
@@ -175,18 +194,23 @@ python3 {skill_dir}/scripts/seo_keywords.py --json {关键词}
 
 **降级**：web_search 不可用 → 用 LLM 训练数据中可验证的公开信息。但需告知用户："素材采集未能使用 web_search，建议在编辑锚点处多加入你自己的内容。"密度强化不依赖搜索，始终执行。
 
----
-
 ### Step 4: 写作
 
+> **🔴 写作模式取决于前置的 `flags.use_writer_model`（详见 4.4），别两种都做**：
+> - **`false`（默认 · 编排器自写）** → 你直接按"写作规范"写正文。**不要调用 `llm_write.py`**（没配写作模型，调了必然 exit 3、白费一轮）。
+> - **`true`（混合路由 · 配了写作模型）** → 你只编排，正文交 `scripts/llm_write.py` 出稿。
+>
+> 下面 4.1-4.3 读取的文件两种模式都要（自写时是写作依据；委托时是 brief 备料）。
+
 ```
+读取: {skill_dir}/references/anti-ai-writing-system.md
 读取: {skill_dir}/references/writing-guide.md
 读取: {skill_dir}/playbook.md（如果存在，按 confidence 分级执行）
 读取: {skill_dir}/history.yaml（最近 3 篇的 dimensions + closing_type 字段）
 读取: {skill_dir}/references/exemplars/index.yaml（如果存在）
 ```
 
-（writing-guide.md 是反 AI 写作底线规则，**未读取前不得开始写作**；它在 Step 4-5 期间保持驻留，Step 5.2 校验仍按其编号规则 1.1-3.2 检查，中途不要丢弃重读。）
+（anti-ai-writing-system.md 是出稿前必须逐条记住的**写作契约**——内联自写与 llm_write.py 共用、实测能把 composite 压到 <30；writing-guide.md 是其背后的详细 Tier 规则。两者**未读取前不得开始写作**，且在写作与验证期间保持驻留，验证模块（wewrite-review）仍按 writing-guide.md 的编号规则 1.1-3.2 检查，中途不要丢弃重读。）
 
 **4.1 维度随机化**：
 
@@ -209,7 +233,7 @@ python3 {skill_dir}/scripts/seo_keywords.py --json {关键词}
 人格的选定规则（参见 `{skill_dir}/references/persona-selection.md`）：
 
 - **style.yaml 有 `writing_persona`** → 直接加载该人格。用户已固定账号声音，尊重配置（persona-selection 的「用户明确指定」优先级最高）。
-- **没有 `writing_persona`**（或用户本轮明确要求换风格）→ 读取 `references/persona-selection.md`，按 Step 2.3 选定选题的特征匹配 top 2 人格；用 history.yaml 最近 3 篇的写作人格降权（保证风格多样化），向用户展示推荐理由让其二选一；匹配不明确时默认 midnight-friend。
+- **没有 `writing_persona`**（或用户本轮明确要求换风格）→ 读取 `references/persona-selection.md`，按选定选题的特征匹配 top 2 人格；用 history.yaml 最近 3 篇的写作人格降权（保证风格多样化），向用户展示推荐理由让其二选一；匹配不明确时默认 midnight-friend。
 
 人格文件定义了：语气浓度、数据呈现方式、情绪弧线、段落节奏、不确定性表达模板等。作为写作的硬性约束执行。
 
@@ -261,7 +285,17 @@ Category 映射规则：
 
 建库命令：`python3 {skill_dir}/scripts/extract_exemplar.py article.md`
 
-**4.4 写文章**：
+**4.4 写文章** —— 本步只产出 `output/article.md`。按前置的 `flags.use_writer_model` **二选一**，别两种都走：
+
+**A. 自写模式（`use_writer_model = false`，默认 · 全 DeepSeek）**：按下面"写作规范"直接把正文写进 `output/article.md`，写完执行 4.5。**不要调用 `llm_write.py`**——没配写作模型，调它只会 exit 3、白白多耗一轮。
+
+**B. 委托模式（`use_writer_model = true`，混合路由 · 配了写作模型）**：你只编排，正文交给写作模型：
+1. 把【Step 3 框架大纲 + **Step 3.2 的真实素材锚点（具体数字/工具名/价格/案例——逐条写进去；写作模型只在给定事实上组织语言，严禁编造）** + 4.1 维度 + 4.2 人格要点 + 4.3 范文风格片段 + 下面"写作规范"全部要求 + 目标字数 + 可用容器语法 + 编辑锚点要求】组装成 brief，写到 `output/_brief.md`。
+2. 调：`python3 {skill_dir}/scripts/llm_write.py --brief output/_brief.md --output output/article.md`
+3. 按退出码：**exit 0**（stdout 是摘要）→ 正文已写入，**不要 cat / 读全文**（靠评分驱动改写——省钱命门；只有 wewrite-review 的整体自评读一次全文），**跳过 4.5** 直接进验证。**exit 3 / 4**（没配/失败）→ 退回 A 自写。
+
+**写作规范**（自己写时直接执行；委托写作模型时这些就是 brief 的内容要求）：
+- **🔴 出稿契约**：严格按 `references/anti-ai-writing-system.md` 的反 AI 写作铁律**逐条满足**（句长强烈交替 / 段落长短交替 / 杜绝 AI 腔词 / 事实零编造 / 情绪有起伏 / 少副词 / 口语化自我修正 / 不堆整齐小标题），违反任一条直接重写。这是把 composite 压到 <30 的关键，下面的细则与之一致。
 - H1 标题（20-28 字） + H2 结构，1500-2500 字
 - **素材 + 增强约束**：Step 3.2 的素材和增强材料分散嵌入各 H2 段落。增强策略的核心输出（角度/密度要点/细节/用户声音）必须贯穿全文，不只装饰性出现一次
 - **写作人格**：按 4.2 加载的人格参数写作（数据呈现方式、个人声音浓度、不确定性表达等）
@@ -271,11 +305,11 @@ Category 映射规则：
 - 2-3 个编辑锚点：`<!-- ✏️ 编辑建议：在这里加一句你自己的经历/看法 -->`
 - 可选容器语法：`:::dialogue`、`:::timeline`、`:::callout`、`:::quote`、`:::highlight`（琥珀高亮框）、`:::summary`（青色总结框）
 
-保存到 `{skill_dir}/output/{date}-{slug}.md`
+保存到 `{skill_dir}/output/article.md`（全流程统一用这个工作文件名；委托写作模型与自己写都写这里）
 
-**4.5 快速自检**（写完后立即执行，减少 Step 5 重写概率）：
+**4.5 快速自检**（写完后立即执行，减少验证阶段重写概率）：
 
-对初稿做 5 项快速扫描，**当场修复**，不留到 Step 5：
+对初稿做 5 项快速扫描，**当场修复**，不留到验证阶段：
 
 **写作层面**：
 1. **禁用词扫描**：检查 writing-guide.md 2.1 的禁用词列表，命中的直接替换
@@ -288,9 +322,19 @@ Category 映射规则：
 
 LLM 自行完成，不需要调用脚本。
 
+### 完成
+
+写回 `output/_state.yaml`：`article: "output/article.md"`、`framework`、
+`enhance_strategy`、`persona`、`dimensions`、`closing_type`、`word_count`，
+`steps_done` 追加 `write`。单独激活时提示："初稿完成，建议接着跑质量验证
+（wewrite-review）再配图发布。"
+
 ---
 
-### Step 5: SEO + 验证
+## wewrite-review — SEO + 质量验证
+
+
+### 管道验证
 
 ```
 读取: {skill_dir}/references/seo-rules.md
@@ -298,52 +342,67 @@ LLM 自行完成，不需要调用脚本。
 
 **5.1 SEO**：3 个备选标题 + 摘要（≤40 字）+ 5 标签 + 关键词密度优化
 
-**5.2 质量验证**（两个维度，每项逐一检查）：
+**5.2 编辑视角整体自评**（**读一遍文章全文**，像挑剔的主编那样判断——这是质量的**主**把关，不是逐项打钩。委托写作模式下这就是你唯一一次把正文读进上下文）：
 
-**A. 写作质量**（writing-guide.md 基础规则）：
+读一遍，问自己：
+- **顺不顺**：读下来通畅吗？逻辑站得住吗？有没有突兀跳转、车轱辘话、为凑字的废话？
+- **像不像一个好作者写的**：有具体细节、有观点、有人味——还是"正确的废话"？
+- **有没有 AI 味**：套话（值得注意的是 / 综上所述 / 赋能…）、通篇一个腔调、情绪全程平铺？命中就改。
+- **真不真**：数据/案例/工具名是不是素材采集拿到的真实素材？**有没有编造？编造必须改——这是底线**。
 
-| 检查项 | 标准 | 规则 |
-|--------|------|------|
-| 句长方差 | 最短与最长句相差 ≥ 30 字 | 1.1 |
-| 词汇温度 | 任意 500 字 ≥ 3 种温度 | 1.2 |
-| 段落节奏 | 无连续 2 个相近长度段落 | 1.3 |
-| 情绪极性 | 负面情绪 ≥ 2 处，无平铺直叙 | 1.4 |
-| 禁用词 | 命中数 = 0 | 2.1 |
-| 真实锚定 | 每个 H2 ≥ 1 条真实素材，零编造 | 3.1 |
-| 具体性 | 每 500 字 ≥ 2 处具体细节 | 3.2 |
+外加按框架看下面内容质量（脚本测不了，你来判），明显缺的补一处：
 
-**B. 内容质量**（基于 Step 3.2 的增强策略检查）：
-
-| 检查项 | 标准 | 适用框架 |
+| 内容检查项 | 标准 | 适用框架 |
 |--------|------|---------|
-| 增强贯穿 | 增强策略的核心输出（角度/密度/细节/体感）在全文可见，不只出现在一段 | 所有 |
-| 开头钩子 | 前 3 句能制造悬念、冲突或好奇心（不是背景铺垫） | 所有 |
-| 金句密度 | 至少 1 处可独立截图转发的句子 | 所有 |
+| 增强贯穿 | 增强策略核心输出全文可见，不只一段 | 所有 |
+| 开头钩子 | 前 3 句制造悬念/冲突/好奇，非背景铺垫 | 所有 |
+| 金句密度 | ≥ 1 处可独立截图转发的句子 | 所有 |
 | 操作密度 | 每个 H2 有可操作要点（工具/步骤/参数） | 痛点/清单 |
-| 角度锐度 | 核心观点能引发同意或反对，不是"两面都有道理" | 热点解读/纯观点 |
-| 场景感 | 至少 2 处有时间/地点/对话等画面细节 | 故事/复盘 |
-| 真实声音 | 至少 1 处引用真实用户评价或体验 | 对比 |
+| 角度锐度 | 核心观点能引发同意或反对 | 热点解读/纯观点 |
+| 场景感 | ≥ 2 处时间/地点/对话画面细节 | 故事/复盘 |
+| 真实声音 | ≥ 1 处真实用户评价或体验 | 对比 |
 
-不通过 → **定向修复**：只替换不达标的具体句子/段落，不动已通过的部分。每轮最多改 3 处，改完立即重新检查该项。2 轮仍不过 → 标注跳过，继续下一项。
+发现问题就**定向修**：只改有问题的具体句子，不重写整段，最多 3-5 处。剩下的小毛病留给作者（编辑锚点）。
 
-**5.3 脚本辅助验证**（补充 5.2 的逐项检查）：
-
-Agent 在 5.2 检查过程中同步完成综合评估（各 H2 之间的语气差异度、信息密度的高低交替、段落间的节奏变化、整体阅读流畅度），产出 0-1 分数。
+**5.3 反 AI 评分（顺手跑一次当参考，别为分数返工）**：
 
 ```bash
-python3 {skill_dir}/scripts/humanness_score.py {article_path} --json --tier3 {agent_tier3_score}
+python3 {skill_dir}/scripts/humanness_score.py output/article.md --json
 ```
 
-解读 JSON 中 `composite_score`（0=质量高, 100=问题多）：
-- < 30 → 通过，继续 Step 6
-- 30-50 → 查看 `param_scores` 中最低分的 1-2 项，只修复对应的具体句子（不重写整段），改完重新打分。1 轮即可
-- \> 50 → 取 `param_scores` 最低的 2-3 项，逐项定向修复（每项只改最相关的 1-2 处），最多 2 轮。仍 > 50 则标记 DONE_WITH_CONCERNS 继续
+`composite_score`（0=好,100=差）只当**参考信号**，不是过线门：
+- 看 `param_scores` 有没有**明显翻车**的项（禁用词命中、句长几乎没方差等）→ 有就顺手修那一处。
+- **别为了压低分数反复重写**：实测这个分单次方差很大（~31-50），且刻意拉满会触发"过度优化"反而更差。**读着顺、没硬伤就进下一步**。
+- 真正的质量门是**人**：作者在编辑锚点处补自己的话、复审定稿。把 `composite_score` 记进状态（收尾时进 history）当长期参考即可。
+
+（委托模式想再润一版：把"最弱 1-2 个 param + 具体改写要求"追加进 `output/_brief.md` 重生成**一次**，不多轮。）
+
+**完成**：写回 `_state.yaml`：`seo.title`、`seo.alt_titles`、`seo.digest`、`seo.tags`、
+`seo.composite_score`，`steps_done` 追加 `review`。
+
+### 自检报告（"检查一下 / 自检 / 这篇怎么样"）
+
+对最近一篇生成的文章（或用户指定的文章）执行，输出生成报告：
+
+**第一部分：生成档案**（这篇是怎么来的）
+1. 读取 `{skill_dir}/history.yaml` 最近一条记录，提取：使用的框架类型 + 写作人格、激活的维度随机化组合、素材采集来源（web_search 还是降级到 LLM）、内容增强策略、范文库是否命中（用了哪几篇 exemplar 还是 fallback 到种子）、playbook 中生效的规则条数。
+2. 若 history.yaml 无记录或用户指定了外部文章 → 跳过此部分，提示"这篇文章不是 WeWrite 生成的，只做质量检查"。
+
+**第二部分：质量检查**（哪里还能改）
+1. `python3 {skill_dir}/scripts/humanness_score.py {article_path} --json`
+2. Agent 解读 JSON 各项得分，翻译成可操作建议：每条定位到具体段落/句子、给出具体改法、按影响度排序最多 5 条。
+3. 若各项得分都不错 → "这篇文章质量不错，建议在编辑锚点处加入你的个人内容就可以发了。"
+
+**输出格式**：自然语言报告，不输出 JSON 或分数。
 
 ---
 
-### Step 6: 视觉 AI
+## wewrite-visual — 视觉 AI（封面 + 配图）
 
-**如果 `skip_image_gen = true`** → 只执行 6.1。
+
+### 执行
+
+**如果 `skip_image_gen = true`** → 只执行 6.1（输出提示词，不生图）。
 
 ```
 读取: {skill_dir}/references/visual-prompts.md
@@ -351,34 +410,41 @@ python3 {skill_dir}/scripts/humanness_score.py {article_path} --json --tier3 {ag
 
 **6.1 实体提取**：从终稿中提取 3-5 个**具体实体**（人物、产品名、场景、数据点、行业术语）。后续所有提示词必须包含至少 2 个实体。
 
-**6.2 封面生成**：生成封面 3 组创意提示词（按 visual-prompts.md），选最佳 1 组调用 image_gen.py 生成。
+**6.2 提示词 + 风格锚定**（一次性把全部提示词写齐，**不要生成一张等一张**）：
+1. 生成封面 3 组创意提示词（按 visual-prompts.md），选最佳 1 组。
+2. **从选定的封面提示词文本**（而非已渲染的图）提取视觉锚点：色板 hex、风格关键词、画面调性。锚点来自提示词本身，所以无需等封面图回来就能继续。
+3. 分析文章结构，为每个需要配图的段落选图片类型（infographic/scene/flowchart/comparison/framework/timeline），按 visual-prompts.md 模板写 3-6 张内文配图提示词；每张都引用第 2 步的视觉锚点，保证全文视觉一致。
+
+**6.3 生成全部图片（封面 + 内文配图，必须实际生成 .png，不能只写提示词就算完成）**：把封面与每张内文配图都用 `image_gen.py` 实际生成出来。封面 `--size cover`，内文配图 `--size article`；多 provider 自动 fallback 已内置。**一次性把全部命令发出**（环境支持并行工具调用就并行，不支持就顺序，但务必把全部图都生成）：
 
 ```bash
-python3 {skill_dir}/toolkit/image_gen.py --prompt "{选定的封面提示词}" --output {skill_dir}/output/{slug}-cover.png --size cover
+python3 {skill_dir}/toolkit/image_gen.py --prompt "{封面提示词}" --output {skill_dir}/output/{slug}-cover.png --size cover
+python3 {skill_dir}/toolkit/image_gen.py --prompt "{配图1提示词}" --output {skill_dir}/output/{slug}-fig1.png --size article
+python3 {skill_dir}/toolkit/image_gen.py --prompt "{配图2提示词}" --output {skill_dir}/output/{slug}-fig2.png --size article
+# …其余配图同理，全部生成
 ```
-（--size 取值：封面用 cover，内文配图用 article；多 provider 自动 fallback 已内置。）
+> 提示词只是中间产物——**本模块完成的标志是 `output/` 下真的出现了这些 .png 文件**，不是把提示词写进某个 md 就完事。
+> 也可用一条命令批量并发（等价、工具内并行）：把 `[{"prompt","output","size"}…]` 写进 `output/_images.json`，再 `python3 {skill_dir}/toolkit/image_gen.py --manifest {skill_dir}/output/_images.json`。
 
-**6.3 封面验证**：
-- **交互模式**：展示封面，问用户"封面效果如何？"。用户 OK → 继续；不满意 → 调整提示词重新生成。
-- **全自动模式**：agent 自检——提示词中的实体是否在画面描述中可识别？如果提示词过于泛化（仅含"科技感""未来感"等抽象词，无具体实体），换一组提示词重试 1 次。
+**6.4 一次性验证 + 插入**：
+- **全自动模式**：所有图返回后，**在一轮内**统一确认每张 .png 都已生成（核心实体可识别、风格一致）。只对明显失败（实体不可辨 / 风格跑偏 / 没生成）的那一张换提示词重试 1 次，其余直接采用。**不要逐张读图、逐张推理**（那会把一次检查拆成多轮，显著拖慢）。
+- **交互模式**：展示封面（及配图），问用户"效果如何？"，不满意再针对性重生成。
 
-**6.3b 风格锚定**：封面确认后，提取视觉锚点（色板 hex、风格关键词、画面调性），后续所有内文配图的提示词必须引用这组锚点，保证全文视觉一致。
-
-**6.4 内文配图**：分析文章结构，为每个需要配图的段落选择图片类型（infographic/scene/flowchart/comparison/framework/timeline），使用对应的结构化提示词模板生成 3-6 张配图提示词（按 visual-prompts.md）。批量调用 image_gen.py，替换 Markdown 占位符。
-
-对每张需要的配图，逐一调用：
-
-```bash
-python3 {skill_dir}/toolkit/image_gen.py --prompt "{该图的结构化提示词}" --output {skill_dir}/output/{slug}-fig{N}.png --size article
-```
-
-生成后把对应 Markdown 图片占位符替换为实际路径。
+确认后把对应的 Markdown 图片占位符一次性替换为实际路径。
 
 **降级**：image_gen.py 支持多 provider 自动 fallback（按 config.yaml 中 providers 列表顺序尝试）。全部失败 → 输出提示词 + 备选图库关键词，继续。
 
+### 完成
+
+写回 `_state.yaml`：`images.cover`、`images.figures`（实际生成的 .png 路径），
+`steps_done` 追加 `visual`。单独激活时展示生成的图片路径并提示可"换个风格重生成"。
+
 ---
 
-### Step 7: 排版 + 发布
+## wewrite-publish — 排版 + 发布
+
+
+### 发布主流程
 
 **7.1 Metadata 预检**（发布前必须通过）：
 
@@ -402,7 +468,7 @@ python3 {skill_dir}/toolkit/image_gen.py --prompt "{该图的结构化提示词}
 
 **如果 `skip_publish = true`** → 直接走 preview。
 
-Converter 自动处理：CJK 加空格、加粗标点外移、列表转 section、外链转脚注、暗黑模式、容器语法、AIGC 声明（impeccable 主题自动追加）、CSS 随机扰动（反低创检测指纹）。
+Converter 自动处理：CJK 加空格、加粗标点外移、列表转 section、外链转脚注、暗黑模式、容器语法、AIGC 声明（**默认追加**，合规标识；主题/配置设 `aigc_footer: false` 可关）。
 
 ```bash
 # 发布
@@ -412,11 +478,21 @@ python3 {skill_dir}/toolkit/cli.py publish {markdown} --cover {cover} --theme {t
 python3 {skill_dir}/toolkit/cli.py preview {markdown} --theme {theme} --no-open -o {output}.html
 ```
 
----
+**完成**：写回 `_state.yaml`：`publish.media_id`（降级时 null）、`publish.preview_html`
+（预览时），`steps_done` 追加 `publish`。单独激活时告知 media_id 或预览文件路径。
+
+### 辅助功能
+
+| 用户说 | 动作 |
+|--------|------|
+| 看看有什么主题 / 主题画廊 | `python3 {skill_dir}/toolkit/cli.py gallery`（浏览器内预览全部 16 个主题） |
+| 换成 XX 主题 | 用该主题重新 preview/publish；用户满意可提示写入 style.yaml 的 theme 字段 |
+| 做一个小绿书 / 图片帖 | `python3 {skill_dir}/toolkit/cli.py image-post img1.jpg img2.jpg -t "标题"` |
+| 只排版不发布 / 预览 | 走 preview 命令，输出本地 HTML 路径 |
 
 ### Step 8: 收尾
 
-**8.1 写入历史**（推送成功或降级都要写，文件不存在则创建）：
+**8.1 写入历史**（推送成功或降级都要写，文件不存在则创建；字段值以 `output/_state.yaml` 为唯一事实源）：
 
 ```yaml
 # → {skill_dir}/history.yaml
@@ -424,7 +500,7 @@ python3 {skill_dir}/toolkit/cli.py preview {markdown} --theme {theme} --no-open 
   title: "{标题}"
   topic_source: "热点抓取"  # 或 "用户指定"
   topic_keywords: ["{词1}", "{词2}"]
-  output_file: "{output 文件路径}"  # e.g. output/2026-03-31-zhangxue-slow-accumulation.md
+  output_file: "output/article.md"  # 全流程统一工作文件名
   framework: "{框架}"
   enhance_strategy: "{增强策略}"  # angle_discovery/density_boost/detail_anchoring/real_feel
   word_count: {字数}
@@ -433,7 +509,7 @@ python3 {skill_dir}/toolkit/cli.py preview {markdown} --theme {theme} --no-open 
   dimensions:
     - "{维度}: {选项}"
   closing_type: "{收尾类型}"  # trailing_off/unanswered/scene_revert/abrupt_stop/anti_conclusion/image
-  composite_score: {Step 5.3 的 composite_score}  # 0=质量高, 100=问题多
+  composite_score: {验证阶段的 composite_score}  # 0=质量高, 100=问题多
   writing_config_snapshot:  # 本次使用的关键参数（从 writing-config.yaml 提取）
     sentence_variance: {值}
     paragraph_rhythm: "{值}"
@@ -456,12 +532,13 @@ python3 {skill_dir}/toolkit/cli.py preview {markdown} --theme {theme} --no-open 
 | 用户说 | 动作 |
 |--------|------|
 | 润色/缩写/扩写/换语气 | 编辑文章 |
-| 封面换暖色调等 | 重新生图 |
-| 用框架 B 重写 | 回到 Step 4 |
-| 换一个选题 | 回到 Step 2.3 |
-| 换成 XX 主题 | 重新渲染 |
+| 封面换暖色调等 | `wewrite-visual` 重新生图 |
+| 用框架 B 重写 | `wewrite-write` 重跑（指定框架） |
+| 换一个选题 | `wewrite-topic` 重跑（或直接给新选题） |
+| 换成 XX 主题 | `wewrite-publish` 重新渲染 |
+| 改写成小红书/抖音 | `wewrite-rewrite` |
 
-其余非管道命令（学习我的修改 / 学习排版 / 导入范文 / 查看范文库 / 看看文章数据 / 主题画廊 / 小绿书 / 检查一下）→ `读取: {skill_dir}/references/commands.md`。
+其余非管道命令按上方「路由」表分发。
 
 ---
 
@@ -477,9 +554,114 @@ python3 {skill_dir}/toolkit/cli.py preview {markdown} --theme {theme} --no-open 
 | 维度随机化 | history 空时跳过去重 |
 | Persona 文件不存在 | 回退到 midnight-friend（默认） |
 | 范文库为空 | Fallback 到 exemplar-seeds.yaml（通用模式） |
-| 去 AI 验证 | 2 轮定向修复不过则跳过该项 |
+| 质量验证 | 评分仅作参考；读着顺、无硬伤即继续，修不动的小问题留给作者 |
 | 生图失败 | 输出提示词 |
 | 推送失败 | 本地 HTML |
 | 历史写入 | 警告不阻断 |
 | 效果数据 | 告知等 24h |
 | Playbook 不存在 | 用 writing-guide.md |
+
+---
+
+## 辅助模块
+
+（上方「路由」表中的模块名对应本节下方的同名小节，命中路由后直接执行对应小节）
+
+## wewrite-style — 风格设置 / Onboard
+
+
+### 执行
+
+**触发场景**：
+1. 主入口 Step 1 发现 `{skill_dir}/style.yaml` 不存在（首次使用）
+2. 用户说"重新设置风格"、"修改配置"
+
+两种场景都执行：
+
+```
+读取: {skill_dir}/references/onboard.md
+```
+
+按 onboard.md 的 Phase 1-4 完成：交互式收集信息 → 生成 `{skill_dir}/style.yaml` →
+可选 Playbook 建库 → 试跑询问。重设风格时以现有 style.yaml 为基线，只改用户要改的字段，
+改完展示全文让用户确认。
+
+**完成后**：若由主管道激活（首次 onboard），回到主管道 Step 1 继续；若用户单独触发，
+告知"配置已更新，下次写作自动生效"。
+
+---
+
+## wewrite-learn — 自学习（改稿飞轮 / 范文库 / 排版学习）
+
+
+### 子功能分发
+
+| 用户说 | 动作 |
+|--------|------|
+| 学习我的修改 / 我改了，学习一下 | `读取: {skill_dir}/references/learn-edits.md`，按其流程执行。支持本地 markdown 修改与微信草稿箱同步（`python3 {skill_dir}/scripts/learn_edits.py --from-wechat`） |
+| 学习排版 / 学排版 + URL | `python3 {skill_dir}/scripts/learn_theme.py <url> --name <name>`，提取后提示用户设置 style.yaml 的 theme 字段 |
+| 学习这篇文章 / 导入范文 + URL | `python3 {skill_dir}/scripts/fetch_article.py <url> -o /tmp/article.md && python3 {skill_dir}/scripts/extract_exemplar.py /tmp/article.md -s <账号名>` |
+| 导入范文 + 本地文件 | `python3 {skill_dir}/scripts/extract_exemplar.py <文件路径>`（多文件可批量） |
+| 查看范文库 | `python3 {skill_dir}/scripts/extract_exemplar.py --list` |
+
+**范文库的用途**：exemplars 会在写作模块（wewrite-write）按框架类型注入初稿 prompt，
+是 SICO 式 few-shot 的来源。导入完成后告知用户库里现有多少篇、覆盖哪些 category。
+
+**改稿飞轮的价值**：每次学习让下一篇初稿更接近用户风格。learn-edits.md 的
+confidence 分级（≥5 硬约束 / <5 软参考 / <2 淘汰）决定规则在写作时的效力。
+
+---
+
+## wewrite-stats — 文章数据复盘
+
+
+### 执行
+
+```
+读取: {skill_dir}/references/effect-review.md
+```
+
+按其流程执行：`fetch_stats.py --days 7` 拉数据 → 匹配并回填 `history.yaml` 的
+stats 字段 → 分析最好/最差表现及原因 → 给出后续选题/标题/框架的调整建议。
+
+**前置**：需要 config.yaml 里的微信 API 凭证。缺凭证 → 告知用户"数据复盘需要配置
+公众号 API（config.yaml），当前只能基于 history.yaml 已有记录做定性分析"，然后就
+history.yaml 现有内容能分析多少分析多少。刚发布的文章 → 告知等 24h 后再看。
+
+**下游影响**：回填的 stats 会被选题模块（wewrite-topic）读取——哪种框架/增强策略
+表现好会加权到下次推荐。这是数据闭环的一半，另一半是 wewrite-learn 的改稿飞轮。
+
+---
+
+## wewrite-rewrite — 一源多平台改写
+
+
+### 前置
+
+1. **源文章**：按优先级解析——用户指定的文件/粘贴内容 > `output/_state.yaml` 的
+   `article` 字段 > `output/article.md`。都没有 → 问用户"要改写哪篇？给我文件路径
+   或直接粘贴全文"。确定后把源复制/保存为 `{skill_dir}/output/source.md`（质量门要用）。
+2. **目标平台**：用户点名了就用；没点名 → 列出 `{skill_dir}/toolkit/platforms/` 下的可用
+   平台（当前：xiaohongshu 小红书、douyin 抖音）问用户要哪几个，或"全部"。
+
+### 执行
+
+```
+读取: {skill_dir}/references/multiplatform-rewrite.md
+```
+
+对每个目标平台：
+
+1. `读取: {skill_dir}/toolkit/platforms/<id>.yaml`，按其 `rewrite_brief`、字数区间、
+   标签数、输出格式改写。
+2. 遵守 multiplatform-rewrite.md 的原创铁律（内容级真改，重构信息顺序/开头/表达，
+   不是洗稿）与人设一致要求（persona 内核不变，只适配表达方式）。
+3. 过双质量门（multiplatform-rewrite.md「质量门」小节）：humanness ≥ 0.6、
+   与源及其他平台版本的 `max_similarity` ≤ 0.6；不过重写该版本，最多 2 次。
+4. 写到 `output/<platform 的 output_filename>`。
+
+### 完成
+
+汇报每个平台版本的产出路径、字数、质量门结果；小红书版说明配图情况（复用了源稿
+哪几张图，或"需补图"）。提醒：各平台账号发布是用户手动动作，WeWrite 当前只发
+公众号草稿箱。

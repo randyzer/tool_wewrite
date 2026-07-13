@@ -124,9 +124,12 @@ python3 toolkit/cli.py themes
 **Claude Code**：
 
 ```bash
-git clone --depth 1 https://github.com/oaker-io/wewrite.git ~/.claude/skills/wewrite
-cd ~/.claude/skills/wewrite && bash install.sh
+git clone --depth 1 https://github.com/oaker-io/wewrite.git ~/wewrite
+cd ~/wewrite && bash install.sh
 ```
+
+`install.sh` 会把主入口 `wewrite` 和各 `wewrite-*` 模块逐个符号链接到
+`~/.claude/skills/`（v2.0 起为模块化架构，仓库可以克隆到任意位置）。
 
 **OpenClaw**：
 
@@ -143,7 +146,10 @@ cd ~/.codex/skills/wewrite && bash install.sh
 python3 scripts/build_codex.py --install   # 装自定义 prompt 到 ~/.codex/prompts/
 ```
 
-之后在 Codex 里用 `/wewrite 写一篇关于 X 的文章` 触发完整流程。Codex 没有 SKILL.md 自动触发机制，所以通过自定义 prompt 承载；源 `SKILL.md` 更新后重跑 `build_codex.py --install` 同步。详见 [`dist/codex/README.md`](dist/codex/README.md)。
+之后在 Codex 里用 `/wewrite 写一篇关于 X 的文章` 触发完整流程。Codex 没有 SKILL.md 自动触发机制，所以通过自定义 prompt 承载（构建时把各模块合并回单体）；源 `skills/` 更新后重跑 `build_codex.py --install` 同步。详见 [`dist/codex/README.md`](dist/codex/README.md)。
+
+> OpenClaw / Codex 均为单文件形态：构建脚本把 `skills/` 下的模块按管道顺序合并回一份
+> 单体 SKILL.md / prompt，下游使用体验与 v1.x 一致。
 
 `install.sh` 会在 `.venv` 里创建隔离环境并安装依赖，自动绕过 macOS Homebrew Python 的 PEP 668 限制。skill 运行时会自动使用该 venv，无需手动 `activate`。
 
@@ -181,13 +187,23 @@ cp config.example.yaml config.yaml
 
 ```
 wewrite/
-├── SKILL.md                  # 主管道（Step 1-8）
+├── skills/                   # 模块化 skill（v2.0：主入口 + 9 个模块，逐个链接到 ~/.claude/skills/）
+│   ├── wewrite/                # 主入口：路由 + 全流程编排（Step 1/8 内联，Step 2-7 调模块）
+│   ├── wewrite-style/          # 风格设置 / Onboard
+│   ├── wewrite-topic/          # 选题（热点 + SEO + 10 个评分选题）
+│   ├── wewrite-write/          # 框架 + 素材 + 反 AI 写作
+│   ├── wewrite-review/         # SEO + 编辑自评 + 反 AI 评分 + 自检报告
+│   ├── wewrite-visual/         # 封面 + 内文配图
+│   ├── wewrite-publish/        # 排版 + 发布 + 主题画廊 + 小绿书
+│   ├── wewrite-learn/          # 学习修改 / 导入范文 / 学排版
+│   ├── wewrite-stats/          # 文章数据复盘
+│   └── wewrite-rewrite/        # 一源多平台改写（小红书 / 抖音）
 ├── config.example.yaml       # API 配置模板
 ├── style.example.yaml        # 风格配置模板
 ├── writing-config.example.yaml # 写作参数模板
 ├── requirements.txt
 │
-├── dist/openclaw/            # OpenClaw 兼容版（CI 自动构建）
+├── dist/openclaw/            # OpenClaw 兼容版（CI 自动构建，模块合并回单体 SKILL.md）
 │
 ├── scripts/                  # 数据采集 + 诊断 + 构建
 │   ├── fetch_hotspots.py       # 多平台热点抓取
@@ -226,7 +242,8 @@ wewrite/
 │   ├── exemplars/              # 用户范文风格库（自动生成，不入 git）
 │   ├── onboard.md              # 首次设置流程
 │   ├── learn-edits.md          # 学习飞轮流程
-│   └── effect-review.md        # 效果复盘流程
+│   ├── effect-review.md        # 效果复盘流程
+│   └── pipeline-state.md       # 跨模块状态契约（output/_state.yaml）
 │
 ├── output/                   # 生成的文章
 ├── corpus/                   # 历史语料（可选）
@@ -238,24 +255,29 @@ wewrite/
 ## 工作流程
 
 ```
-Step 1  环境检查 + 加载风格（不存在则 Onboard）
+Step 1  环境检查 + 加载风格（不存在则 Onboard）        ← 主入口 wewrite
   ↓
-Step 2  热点抓取 → 历史去重 + SEO → 选题
+Step 2  热点抓取 → 历史去重 + SEO → 选题              ← wewrite-topic
   ↓
-Step 3  框架选择 → 素材采集（WebSearch 真实数据）→ 内容增强（按框架类型匹配策略）
+Step 3  框架选择 → 素材采集（WebSearch 真实数据）      ┐
+  ↓                                                    ├ wewrite-write
+Step 4  维度随机化 → 范文注入 → 写作 → 快速自检        ┘
   ↓
-Step 4  维度随机化 → 范文风格注入 → 写作（内容增强约束 + 真实素材锚定 + 编辑锚点）→ 快速自检
+Step 5  SEO 优化 → 质量验证                            ← wewrite-review
   ↓
-Step 5  SEO 优化 → 质量验证
+Step 6  视觉 AI（封面 + 内文配图）                     ← wewrite-visual
   ↓
-Step 6  视觉 AI（封面 + 内文配图）
+Step 7  预检 + 排版 + 发布（16 主题 + 微信兼容修复）   ← wewrite-publish
   ↓
-Step 7  预检 + 排版 + 发布（16 主题 + 微信兼容修复）
-  ↓
-Step 8  写入历史 → 回复用户（含编辑建议 + 飞轮提示）
+Step 8  写入历史 → 回复用户（含编辑建议 + 飞轮提示）   ← 主入口 wewrite
 ```
 
-默认全自动。说"交互模式"可在选题/框架/配图处暂停确认。
+默认全自动，主入口按序编排各模块，状态经 `output/_state.yaml` 传递
+（契约见 `references/pipeline-state.md`）。说"交互模式"可在选题/框架/配图处暂停确认。
+
+每个模块也可以单独激活，one step at a time：只要选题说 `/wewrite-topic`、
+只要封面说 `/wewrite-visual`、检查一篇文章说 `/wewrite-review`、
+一稿多发说 `/wewrite-rewrite`——缺前置时模块会自己补齐或向你要。
 
 ## Toolkit 独立使用
 

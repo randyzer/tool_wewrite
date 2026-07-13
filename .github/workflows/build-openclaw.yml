@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'SKILL.md'
+      - 'skills/**'
       - 'references/**'
       - 'scripts/**'
       - 'toolkit/**'
@@ -31,7 +31,9 @@ jobs:
       - name: Context budget guard (#16)
         run: |
           python3 scripts/context_budget.py
-          python3 scripts/context_budget.py --budget-tokens 12500
+          # v2.0 模块化：峰值 = 主入口 + 5 个管道模块 SKILL.md + on-path references，
+          # 比 v1.x 单体多 ~2.5k tokens（各模块自带运行约定/前置），基线 ~15.1k。
+          python3 scripts/context_budget.py --budget-tokens 15500
 
       - name: Build OpenClaw skill
         run: python3 scripts/build_openclaw.py
@@ -40,7 +42,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add dist/openclaw/
+          git add SKILL.md dist/openclaw/
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else

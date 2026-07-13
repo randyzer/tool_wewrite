@@ -1,0 +1,56 @@
+---
+name: wewrite-rewrite
+description: |
+  WeWrite 多平台改写模块：把一篇公众号文章（或指定源稿）内容级真改写成其他平台版本，
+  当前支持小红书（图文笔记）、抖音（口播脚本），过原创度与反 AI 双质量门。
+  触发关键词：改写成小红书、小红书版、抖音版、口播稿、多平台分发、一稿多发、平台改写。
+  不应被"翻译"、"缩写"、"换个标题"触发——那些是单平台编辑动作。
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+  - Edit
+  - Glob
+---
+
+# wewrite-rewrite — 一源多平台改写
+
+<!-- wewrite:standalone-start -->
+## 运行约定
+
+- **{root}** = `{skill_dir}/root`（本目录内指向 WeWrite 仓库根的符号链接）。
+- **Python**：优先 venv——`PY="{root}/.venv/bin/python3"; [ -x "$PY" ] || PY="python3"`；下文 `python3` 均指 `$PY`。
+- **`读取: <路径>`** = 用文件读取工具真实读完该文件再继续，不是注释。
+- **references/ 文档中的 `{skill_dir}`** 一律指 `{root}`（历史约定，指仓库根）。
+- **管道状态**：`{root}/output/_state.yaml`（契约见 `{root}/references/pipeline-state.md`）。
+<!-- wewrite:standalone-end -->
+
+## 前置
+
+1. **源文章**：按优先级解析——用户指定的文件/粘贴内容 > `output/_state.yaml` 的
+   `article` 字段 > `output/article.md`。都没有 → 问用户"要改写哪篇？给我文件路径
+   或直接粘贴全文"。确定后把源复制/保存为 `{root}/output/source.md`（质量门要用）。
+2. **目标平台**：用户点名了就用；没点名 → 列出 `{root}/toolkit/platforms/` 下的可用
+   平台（当前：xiaohongshu 小红书、douyin 抖音）问用户要哪几个，或"全部"。
+
+## 执行
+
+```
+读取: {root}/references/multiplatform-rewrite.md
+```
+
+对每个目标平台：
+
+1. `读取: {root}/toolkit/platforms/<id>.yaml`，按其 `rewrite_brief`、字数区间、
+   标签数、输出格式改写。
+2. 遵守 multiplatform-rewrite.md 的原创铁律（内容级真改，重构信息顺序/开头/表达，
+   不是洗稿）与人设一致要求（persona 内核不变，只适配表达方式）。
+3. 过双质量门（multiplatform-rewrite.md「质量门」小节）：humanness ≥ 0.6、
+   与源及其他平台版本的 `max_similarity` ≤ 0.6；不过重写该版本，最多 2 次。
+4. 写到 `output/<platform 的 output_filename>`。
+
+## 完成
+
+汇报每个平台版本的产出路径、字数、质量门结果；小红书版说明配图情况（复用了源稿
+哪几张图，或"需补图"）。提醒：各平台账号发布是用户手动动作，WeWrite 当前只发
+公众号草稿箱。
