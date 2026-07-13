@@ -14,7 +14,6 @@ allowed-tools:
 
 # wewrite-review — SEO + 质量验证
 
-<!-- wewrite:standalone-start -->
 ## 运行约定
 
 - **CLI**：确定性操作走 `wewrite` 命令（需在 PATH；缺失则引导 `uv tool install wewrite`，或在仓库里 `bash install.sh`）。
@@ -32,7 +31,6 @@ allowed-tools:
    读不到该文件就按本文件内建检查项执行）。
 3. **模式判断**：管道内（或用户要"优化这篇"）→ 走「管道验证」；用户只要报告
    （"检查一下/怎么样"）→ 走「自检报告」，只诊断不改稿。
-<!-- wewrite:standalone-end -->
 
 ## 管道验证
 

@@ -14,7 +14,6 @@ allowed-tools:
 
 # wewrite-topic — 选题
 
-<!-- wewrite:standalone-start -->
 ## 运行约定
 
 - **CLI**：确定性操作走 `wewrite` 命令（需在 PATH；缺失则引导 `uv tool install wewrite`，或在仓库里 `bash install.sh`）。
@@ -27,7 +26,6 @@ allowed-tools:
 
 - `{home}/style.yaml` 存在 → 提取 `topics`、`content_style`。不存在 → 问用户"你的
   公众号主要写哪几个方向？"用回答临时代替 topics，并提示可用 **wewrite-style** 完成完整设置。
-<!-- wewrite:standalone-end -->
 
 ## 2.1 热点抓取
 

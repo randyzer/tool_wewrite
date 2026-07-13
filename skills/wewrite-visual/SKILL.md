@@ -15,7 +15,6 @@ allowed-tools:
 
 # wewrite-visual — 视觉 AI（封面 + 配图）
 
-<!-- wewrite:standalone-start -->
 ## 运行约定
 
 - **CLI**：确定性操作走 `wewrite` 命令（需在 PATH；缺失则引导 `uv tool install wewrite`，或在仓库里 `bash install.sh`）。
@@ -31,7 +30,6 @@ allowed-tools:
 2. **降级标记**：读 `_state.yaml` 的 `flags.skip_image_gen`；缺失或 `diagnosed_at`
    非当天 → `wewrite diagnose --json` 重取并写回。
 3. style.yaml 的 `cover_style` / `cover_template`（有则作为封面风格约束）。
-<!-- wewrite:standalone-end -->
 
 ## 执行
 

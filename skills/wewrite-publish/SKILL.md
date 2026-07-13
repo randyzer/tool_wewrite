@@ -16,7 +16,6 @@ allowed-tools:
 
 # wewrite-publish — 排版 + 发布
 
-<!-- wewrite:standalone-start -->
 ## 运行约定
 
 - **CLI**：确定性操作走 `wewrite` 命令（需在 PATH；缺失则引导 `uv tool install wewrite`，或在仓库里 `bash install.sh`）。
@@ -34,7 +33,6 @@ allowed-tools:
 4. **主题**：style.yaml 的 `theme`，默认 professional-clean。
 5. **降级标记**：读 `_state.yaml` 的 `flags.skip_publish`；缺失或 `diagnosed_at`
    非当天 → `wewrite diagnose --json` 重取并写回。
-<!-- wewrite:standalone-end -->
 
 ## 发布主流程
 

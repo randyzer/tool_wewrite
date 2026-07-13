@@ -6,7 +6,9 @@
 #    editable 安装并链接到 ~/.local/bin（绕过 macOS PEP 668）。
 #    在 dist 拷贝（无 pyproject.toml）里运行时自动改为从 git 安装。
 # 2) 把 skills/ 下的主入口与各 wewrite-* 模块符号链接到
-#    ~/.claude/skills/ 和 ~/.agents/skills/（可用环境变量覆盖）。
+#    ~/.claude/skills/ 和 ~/.agents/skills/（可用环境变量覆盖）；
+#    检测到 OpenClaw / Codex 时（~/.openclaw、~/.codex 存在）同样链接——
+#    三家均原生支持 folder-per-skill 的 Agent Skills 标准。
 # 3) 检测到 v2.1 之前留在仓库根的用户状态（style.yaml 等）时，
 #    执行 `wewrite migrate` 迁到 $WEWRITE_HOME（默认 ~/.wewrite，幂等）。
 #
@@ -53,8 +55,12 @@ fi
 command -v wewrite >/dev/null 2>&1 && echo "✓ wewrite CLI 就绪：$(command -v wewrite)" \
   || echo "⚠ 当前 shell 尚未找到 wewrite，重开终端或检查 PATH" >&2
 
-# ---- 2) skill 链接：Claude Code + Agent-Skills 标准目录 ----
+# ---- 2) skill 链接：Claude Code + Agent-Skills 标准目录；
+#      装了 OpenClaw / Codex 的机器（其家目录已存在）也一并链接 ----
 DESTS=("${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}" "${AGENTS_SKILLS_DIR:-$HOME/.agents/skills}")
+for OPT in "$HOME/.openclaw/skills" "$HOME/.codex/skills"; do
+  [ -d "$(dirname "$OPT")" ] && DESTS+=("$OPT")
+done
 if [ -d skills ]; then
   for SKILLS_TARGET in "${DESTS[@]}"; do
     # 防呆：目标本身是指回本仓库的符号链接时，逐 skill 链接会写回仓库内，跳过

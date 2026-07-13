@@ -19,7 +19,6 @@ allowed-tools:
 
 # wewrite-write — 框架 + 素材 + 写作
 
-<!-- wewrite:standalone-start -->
 ## 运行约定
 
 - **CLI**：确定性操作走 `wewrite` 命令（需在 PATH；缺失则引导 `uv tool install wewrite`，或在仓库里 `bash install.sh`）。
@@ -36,7 +35,6 @@ allowed-tools:
    `blacklist`、`writing_persona`、`content_style`。不存在 → 先激活 **wewrite-style**（onboard）。
 3. **写作模式标记**：读 `_state.yaml` 的 `flags.use_writer_model`；缺失或
    `diagnosed_at` 非当天 → `wewrite diagnose --json` 重取并写回。
-<!-- wewrite:standalone-end -->
 
 ## Step 3: 框架 + 素材
 
