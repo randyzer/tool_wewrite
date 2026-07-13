@@ -61,6 +61,9 @@ class WeChatConverter:
         # Enhance code blocks (add data-lang attribute)
         html = self._enhance_code_blocks(html)
 
+        # H2 章节编号（主题 section_numbering: true 时启用）
+        html = self._number_sections(html)
+
         # Process images (ensure responsive styling)
         html, images = self._process_images(html)
 
@@ -78,6 +81,9 @@ class WeChatConverter:
 
         # Apply WeChat compatibility fixes
         html = self._apply_wechat_fixes(html)
+
+        # 净化不兼容标签/属性（codehilite 等库会残留 div/class）
+        html = self._sanitize_for_wechat(html)
 
         # Inject dark mode attributes
         html = self._inject_darkmode(html)
@@ -162,10 +168,22 @@ class WeChatConverter:
             src = img.get("src", "")
             if src:
                 images.append(src)
+            # GIF 角标：动图上方右对齐小标签（不用 absolute 定位——微信不支持）
+            is_gif = src.lower().split("?")[0].endswith(".gif")
+            if is_gif:
+                badge = soup.new_tag("section")
+                badge["style"] = "display: flex; justify-content: flex-end; margin: 24px 0 4px"
+                tag = soup.new_tag("span")
+                tag["style"] = ("background: rgba(0,0,0,0.55); color: #ffffff; font-size: 11px; "
+                                "padding: 2px 8px; border-radius: 4px; letter-spacing: 1px")
+                tag.string = "GIF"
+                badge.append(tag)
+                img.insert_before(badge)
             # Ensure responsive image styles
             existing = img.get("style", "")
             if "max-width" not in existing:
-                additions = "max-width: 100%; height: auto; display: block; margin: 24px auto"
+                margin = "margin: 4px auto 24px" if is_gif else "margin: 24px auto"
+                additions = f"max-width: 100%; height: auto; display: block; {margin}"
                 img["style"] = f"{existing}; {additions}" if existing else additions
         return str(soup), images
 
@@ -410,6 +428,21 @@ class WeChatConverter:
 
         return str(soup)
 
+    def _sanitize_for_wechat(self, html: str) -> str:
+        """微信会改写 <div>、剥离 class/id —— 统一转 section 并清属性。
+
+        主要来源：markdown 库的 codehilite 包装（noclasses 只内联高亮色，
+        外层仍是 <div class="codehilite">）、fenced_code 的 language-* class。
+        """
+        soup = BeautifulSoup(html, "html.parser")
+        for div in soup.find_all("div"):
+            div.name = "section"
+        for el in soup.find_all(attrs={"class": True}):
+            del el["class"]
+        for el in soup.find_all(attrs={"id": True}):
+            del el["id"]
+        return str(soup)
+
     # -- Container block syntax --
 
     _INLINE_CODE_RE = re.compile(r"`([^`\n]+?)`")
@@ -443,6 +476,7 @@ class WeChatConverter:
         text = self._process_timeline(text)
         text = self._process_callout(text)
         text = self._process_quote_block(text)
+        text = self._process_pullquote(text)
         text = self._process_highlight(text)
         text = self._process_summary(text)
         return text
@@ -532,6 +566,36 @@ class WeChatConverter:
 
         return re.sub(r':::quote\n(.*?)\n:::', replace_quote, text, flags=re.DOTALL)
 
+    def _process_pullquote(self, text: str) -> str:
+        """Convert :::pullquote blocks to centered stand-alone pull quotes（金句居中）."""
+        primary = self._theme.colors.get("primary", "#2563eb")
+
+        def replace_pullquote(match):
+            content = self._inline_md(match.group(1).strip().replace('\n', '<br>'))
+            return (
+                f'<section style="margin: 36px 0; padding: 0 24px; text-align: center">'
+                f'<section style="font-size: 30px; line-height: 1; color: {primary}; font-weight: 700; margin-bottom: 10px">“</section>'
+                f'<section style="font-size: 18px; font-weight: 600; line-height: 1.9; color: #333333">{content}</section>'
+                # 装饰短横内置占位，防止微信剥空元素样式
+                f'<section style="width: 36px; height: 2px; background: {primary}; margin: 16px auto 0"><span leaf=""><br></span></section>'
+                f'</section>')
+
+        return re.sub(r':::pullquote\n(.*?)\n:::', replace_pullquote, text, flags=re.DOTALL)
+
+    def _number_sections(self, html: str) -> str:
+        """给 H2 加两位数章节编号（01/02/…）。主题 YAML 顶层 section_numbering: true 启用。"""
+        raw = getattr(self._theme, '_raw_data', {}) or {}
+        if not raw.get('section_numbering'):
+            return html
+        primary = self._theme.colors.get("primary", "#2563eb")
+        soup = BeautifulSoup(html, "html.parser")
+        for i, h2 in enumerate(soup.find_all("h2"), 1):
+            num = soup.new_tag("span")
+            num["style"] = f"color: {primary}; font-weight: 800; margin-right: 10px; letter-spacing: 1px"
+            num.string = f"{i:02d}"
+            h2.insert(0, num)
+        return str(soup)
+
     # -- AIGC footer --
 
     def _append_aigc_footer(self, html: str) -> str:
@@ -604,6 +668,44 @@ class WeChatConverter:
         # Truncate at valid UTF-8 boundary
         truncated = encoded[:target_bytes].decode("utf-8", errors="ignore").rstrip()
         return truncated + ellipsis
+
+
+def make_paste_safe(html: str) -> str:
+    """粘贴路径加固：文本节点包 <span leaf="">，空装饰元素补 <br> 占位。
+
+    微信编辑器在粘贴时会重排不在 leaf span 内的文本、剥掉空元素的样式；
+    API 发布草稿箱不经编辑器改写，无需本处理——本函数只用于 preview
+    （复制粘贴进编辑器）路径。
+    """
+    soup = BeautifulSoup(html, "html.parser")
+
+    # 1) 非空文本节点包 leaf（代码区跳过，已在 leaf span 内的跳过）
+    for node in list(soup.find_all(string=True)):
+        if not str(node).strip():
+            continue
+        if node.find_parent(["pre", "code"]) is not None:
+            continue
+        parent = node.parent
+        if parent is None or (parent.name == "span" and parent.has_attr("leaf")):
+            continue
+        wrapper = soup.new_tag("span")
+        wrapper["leaf"] = ""
+        node.wrap(wrapper)
+
+    # 2) 空装饰元素（分隔线、圆点等）补占位，防样式被剥
+    for el in soup.find_all(["section", "span"]):
+        if el.get_text(strip=True):
+            continue
+        if el.find(["img", "br"]) is not None:
+            continue
+        if el.name == "span" and el.has_attr("leaf"):
+            continue
+        ph = soup.new_tag("span")
+        ph["leaf"] = ""
+        ph.append(soup.new_tag("br"))
+        el.append(ph)
+
+    return str(soup)
 
 
 def preview_html(body_html: str, theme: Theme) -> str:

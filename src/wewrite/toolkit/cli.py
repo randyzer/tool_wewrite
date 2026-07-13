@@ -13,11 +13,19 @@ import sys
 import webbrowser
 from pathlib import Path
 
-from .converter import WeChatConverter, preview_html
+from .converter import WeChatConverter, make_paste_safe, preview_html
 from .theme import load_theme, list_themes
 from .wechat_api import get_access_token, upload_image, upload_thumb
 from .publisher import create_draft, create_image_post
 from .config import load_config
+
+
+def _print_validation(body_html: str) -> None:
+    """产物合规自检：converter 自产应恒过 ERROR 级，命中即打印醒目告警（不阻断）。"""
+    from ..commands.validate_html import validate_html
+    issues = validate_html(body_html)
+    for i in issues:
+        print(f"  ⚠ [{i['level']}] {i['rule']}: {i['message']}", file=sys.stderr)
 
 
 def cmd_preview(args):
@@ -26,8 +34,13 @@ def cmd_preview(args):
     converter = WeChatConverter(theme=theme)
     result = converter.convert_file(args.input)
 
+    _print_validation(result.html)
+
+    # 粘贴路径加固（preview 的用途就是复制进编辑器）；--no-paste-safe 关闭
+    body = result.html if getattr(args, "no_paste_safe", False) else make_paste_safe(result.html)
+
     # Wrap in full HTML for browser preview
-    full_html = preview_html(result.html, theme)
+    full_html = preview_html(body, theme)
 
     # Write to temp file
     input_path = Path(args.input)
@@ -62,6 +75,8 @@ def cmd_publish(args):
     theme = load_theme(theme_name)
     converter = WeChatConverter(theme=theme)
     result = converter.convert_file(args.input)
+
+    _print_validation(result.html)
 
     print(f"Title: {result.title}")
     print(f"Digest: {result.digest}")
@@ -358,6 +373,7 @@ def main():
     p_preview.add_argument("-t", "--theme", default="professional-clean", help="Theme name")
     p_preview.add_argument("-o", "--output", help="Output HTML file path")
     p_preview.add_argument("--no-open", action="store_true", help="Don't open browser")
+    p_preview.add_argument("--no-paste-safe", action="store_true", help="不做粘贴加固（leaf 包裹）")
 
     # publish
     p_publish = sub.add_parser("publish", help="Convert and publish as WeChat draft")

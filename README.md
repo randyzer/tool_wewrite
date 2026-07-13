@@ -229,6 +229,8 @@ wewrite themes     # 列出主题名称
 
 所有主题均支持微信暗黑模式。`wewrite learn-theme <url>` 学到的新主题存在 `~/.wewrite/themes/`，加载时优先于内置主题。
 
+另有四个排版细节自动处理：**产物合规校验**（`wewrite validate`，preview/publish 自动跑，拦截会被微信过滤的写法）、**粘贴加固**（preview 产物自动做 `<span leaf>` 包裹，复制进编辑器不掉样式；API 发布路径无需）、**GIF 角标**（动图自动加右上角标签）、**H2 章节编号**（主题 YAML 设 `section_numbering: true` 启用）。
+
 <details>
 <summary><b>微信兼容性自动修复</b>（converter 内置兜底）</summary>
 
@@ -266,7 +268,7 @@ wewrite themes     # 列出主题名称
 :::
 ````
 
-另有 `:::highlight`（琥珀高亮框）、`:::summary`（青色总结框）。
+另有 `:::pullquote`（金句居中，带主题色装饰）、`:::highlight`（琥珀高亮框）、`:::summary`（青色总结框）。
 
 </details>
 
@@ -284,6 +286,7 @@ wewrite seo --json "AI大模型" "科技股"               # SEO 分析
 wewrite exemplar article.md / --list                # 范文风格库
 wewrite fetch-article <url> -o out.md               # 公众号文章 → Markdown
 wewrite learn-theme <url> --name my-style           # 学排版主题
+wewrite validate article.html                       # 微信兼容性校验
 wewrite diagnose                                    # 环境 + 配置自检
 wewrite home                                        # 查看状态目录
 wewrite migrate --from <旧仓库路径>                  # 从 v2.1 及更早版本迁移状态

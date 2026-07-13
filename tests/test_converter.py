@@ -19,7 +19,7 @@ import re
 import pytest
 from bs4 import BeautifulSoup
 
-from wewrite.toolkit.converter import ConvertResult, WeChatConverter, preview_html
+from wewrite.toolkit.converter import ConvertResult, WeChatConverter, make_paste_safe, preview_html
 from wewrite.toolkit.theme import Theme, load_theme
 
 
@@ -527,3 +527,53 @@ class TestContainerInlineMarkdown:
         assert "**" not in html and "`" not in html
         assert "<strong" in html and "质量" in html
         assert "<em" in html and "慢" in html and "<code" in html
+
+
+class TestTypographyR1:
+    """排版增强 R1：sanitize / validate / paste-safe / pullquote / GIF 角标 / 章节编号。"""
+
+    def _conv(self):
+        return WeChatConverter(theme=load_theme("professional-clean", THEMES_DIR))
+
+    def test_codehilite_div_class_sanitized(self):
+        html = self._conv().convert("```python\nx = 1\n```").html
+        assert "<div" not in html and "class=" not in html
+
+    def test_converter_output_passes_validator(self):
+        from wewrite.commands.validate_html import validate_html
+        md = "## 标题\n\n正文 **加粗**。\n\n```js\nlet x=1\n```\n\n![g](a.gif)"
+        html = self._conv().convert(md).html
+        errors = [i for i in validate_html(html) if i["level"] == "ERROR"]
+        assert errors == []
+
+    def test_validator_catches_forbidden(self):
+        from wewrite.commands.validate_html import validate_html
+        bad = '<div class="x" style="position:absolute"><style>a{}</style></div>'
+        rules = {i["rule"] for i in validate_html(bad)}
+        assert {"div_tag", "class_attr", "position_unsupported", "style_tag"} <= rules
+
+    def test_paste_safe_wraps_text_and_pads_empty(self):
+        html = ('<section><p>你好</p>'
+                '<section style="width:36px;height:2px;background:#000"></section>'
+                '<pre><code>x = 1</code></pre></section>')
+        out = make_paste_safe(html)
+        assert '<span leaf="">你好</span>' in out
+        assert 'background:#000"><span leaf=""><br/></span></section>' in out.replace("'", '"')
+        assert "<code><span" not in out  # 代码区不包
+
+    def test_pullquote_renders_centered(self):
+        html = self._conv().convert(":::pullquote\n慢就是 **快**\n:::").html
+        assert "text-align: center" in html and "慢就是" in html and "<strong" in html
+        assert ":::" not in html
+
+    def test_gif_badge(self):
+        html = self._conv().convert("![动图](demo.gif)\n\n![静图](p.png)").html
+        assert html.count(">GIF</span>") == 1
+
+    def test_section_numbering_theme_flag(self):
+        theme = load_theme("professional-clean", THEMES_DIR)
+        theme._raw_data = dict(theme._raw_data, section_numbering=True)
+        html = WeChatConverter(theme=theme).convert("## 一\n\nx\n\n## 二\n\ny").html
+        assert ">01</span>" in html and ">02</span>" in html
+        html_off = self._conv().convert("## 一\n\nx").html
+        assert ">01</span>" not in html_off

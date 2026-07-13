@@ -25,6 +25,7 @@ _COMMANDS = {
     "similarity": ("wewrite.commands.similarity_check", "多平台版本原创度检查"),
     "build-playbook": ("wewrite.commands.build_playbook", "从历史语料生成 playbook"),
     "image-gen": ("wewrite.toolkit.image_gen", "AI 图片生成（多 provider fallback）"),
+    "validate": ("wewrite.commands.validate_html", "HTML 微信兼容性校验"),
 }
 
 # toolkit/cli.py 自带子命令（preview/publish/gallery/themes/image-post/learn-theme），

@@ -455,7 +455,8 @@ wewrite image-gen --prompt "{配图2提示词}" --output {home}/output/{slug}-fi
 | 正文字数 | ≥ 200 字 | 警告"内容过短，微信可能不收录" |
 | 图片数量 | ≤ 10 张 | 超出则移除末尾多余图片 |
 
-预检全部通过后才进入排版。
+预检全部通过后才进入排版。converter 产物自带微信兼容性校验（preview/publish 自动执行，
+命中 ERROR 会打印告警）；人工改过 HTML 后可手动 `wewrite validate <file>` 复查。
 
 **平台硬限**（converter 不强制，写作/发布时 agent 必须遵守）：
 - 单篇正文 ≤ 20000 字
