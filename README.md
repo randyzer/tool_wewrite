@@ -6,7 +6,7 @@
 
 选题 · 写作 · 质量评分 · AI 配图 · 16 主题排版 · 草稿箱推送 · 多平台改写 · 越用越像你
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/imraywang/wewrite/blob/main/LICENSE)
 [![Build](https://github.com/imraywang/wewrite/actions/workflows/build-openclaw.yml/badge.svg)](https://github.com/imraywang/wewrite/actions)
 [![Version](https://img.shields.io/badge/version-3.2.0-059669)](https://github.com/imraywang/wewrite/blob/main/VERSION)
 [![Skills](https://img.shields.io/badge/skills-1%20主入口%20%2B%209%20模块-8b5cf6)](#-模块速查)
@@ -39,18 +39,18 @@
 
 ## 👀 效果预览
 
-同一篇示例文章（[docs/demo-article.md](docs/demo-article.md)）× 6 个主题，`wewrite preview` 真实渲染长图（含 label 小标签、steps 步骤卡、callout / timeline / quote / summary 组件与 AIGC 声明脚注）：
+同一篇示例文章（[docs/demo-article.md](https://github.com/imraywang/wewrite/blob/main/docs/demo-article.md)）× 6 个主题，`wewrite preview` 真实渲染长图（含 label 小标签、steps 步骤卡、callout / timeline / quote / summary 组件与 AIGC 声明脚注）：
 
 <table>
 <tr>
-<td width="33%" align="center"><img src="docs/screenshots/professional-clean.png" width="250"><br><sub><b>professional-clean（默认）</b></sub></td>
-<td width="33%" align="center"><img src="docs/screenshots/sspai.png" width="250"><br><sub><b>sspai</b></sub></td>
-<td width="33%" align="center"><img src="docs/screenshots/warm-editorial.png" width="250"><br><sub><b>warm-editorial</b></sub></td>
+<td width="33%" align="center"><img src="https://raw.githubusercontent.com/imraywang/wewrite/main/docs/screenshots/professional-clean.png" width="250"><br><sub><b>professional-clean（默认）</b></sub></td>
+<td width="33%" align="center"><img src="https://raw.githubusercontent.com/imraywang/wewrite/main/docs/screenshots/sspai.png" width="250"><br><sub><b>sspai</b></sub></td>
+<td width="33%" align="center"><img src="https://raw.githubusercontent.com/imraywang/wewrite/main/docs/screenshots/warm-editorial.png" width="250"><br><sub><b>warm-editorial</b></sub></td>
 </tr>
 <tr>
-<td width="33%" align="center"><img src="docs/screenshots/tech-modern.png" width="250"><br><sub><b>tech-modern</b></sub></td>
-<td width="33%" align="center"><img src="docs/screenshots/bauhaus.png" width="250"><br><sub><b>bauhaus</b></sub></td>
-<td width="33%" align="center"><img src="docs/screenshots/midnight.png" width="250"><br><sub><b>midnight</b></sub></td>
+<td width="33%" align="center"><img src="https://raw.githubusercontent.com/imraywang/wewrite/main/docs/screenshots/tech-modern.png" width="250"><br><sub><b>tech-modern</b></sub></td>
+<td width="33%" align="center"><img src="https://raw.githubusercontent.com/imraywang/wewrite/main/docs/screenshots/bauhaus.png" width="250"><br><sub><b>bauhaus</b></sub></td>
+<td width="33%" align="center"><img src="https://raw.githubusercontent.com/imraywang/wewrite/main/docs/screenshots/midnight.png" width="250"><br><sub><b>midnight</b></sub></td>
 </tr>
 </table>
 
@@ -119,7 +119,7 @@ cd ~/wewrite && bash install.sh
 python3 scripts/build_codex.py --install
 ```
 
-源 `skills/` 更新后重跑 `build_codex.py --install` 同步。详见 [`dist/codex/README.md`](dist/codex/README.md)。
+源 `skills/` 更新后重跑 `build_codex.py --install` 同步。详见 [`dist/codex/README.md`](https://github.com/imraywang/wewrite/blob/main/dist/codex/README.md)。
 
 </details>
 
@@ -312,7 +312,7 @@ Step 7  预检 + 排版 + 发布（16 主题 + 微信兼容修复）   ← wewri
 Step 8  写入历史 → 回复用户（含编辑建议 + 飞轮提示）   ← 主入口 wewrite
 ```
 
-默认全自动，主入口按序编排各模块，状态经 `~/.wewrite/output/_state.yaml` 传递（契约见 [`skills/wewrite/references/pipeline-state.md`](skills/wewrite/references/pipeline-state.md)）。
+默认全自动，主入口按序编排各模块，状态经 `~/.wewrite/output/_state.yaml` 传递（契约见 [`skills/wewrite/references/pipeline-state.md`](https://github.com/imraywang/wewrite/blob/main/skills/wewrite/references/pipeline-state.md)）。
 
 <details>
 <summary><b>📁 目录结构</b></summary>
