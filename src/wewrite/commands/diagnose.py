@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Diagnose which anti-AI measures are active in this WeWrite installation.
+Diagnose which writing-quality (humanness) measures are active in this WeWrite installation.
 
 Checks: Python deps, config.yaml, style.yaml, enhancement files, dimension variance.
 Outputs a human-readable report or structured JSON.
@@ -38,7 +38,8 @@ REQUIRED_MODULES = [
     ("PIL", "Pillow"),
 ]
 
-# Anti-AI weight per check (0 = no anti-AI impact, higher = more important)
+# Humanness weight per check (0 = no humanness impact, higher = more important)
+# JSON keys keep the legacy anti_ai_* names for compatibility.
 WEIGHTS = {
     "style_file": 3,
     "writing_persona": 3,
@@ -47,7 +48,7 @@ WEIGHTS = {
     "playbook": 2,
     "history_articles": 1,
     "dimension_variance": 1,
-    # These have 0 weight (no anti-AI impact)
+    # These have 0 weight (no humanness impact)
     "python_packages": 0,
     "config_file": 0,
     "wechat_credentials": 0,
@@ -238,7 +239,7 @@ def check_dimensions():
 
 
 def compute_summary(checks):
-    """Compute pass/warn/fail counts, anti-AI score, and recommendations."""
+    """Compute pass/warn/fail counts, humanness score, and recommendations."""
     passed = sum(1 for c in checks if c["status"] == "pass")
     warnings = sum(1 for c in checks if c["status"] == "warn")
     failures = sum(1 for c in checks if c["status"] == "fail")
@@ -262,7 +263,7 @@ def compute_summary(checks):
         if name == "style_file":
             recs.append('Run the skill once to trigger onboard（重新设置风格）')
         elif name == "writing_persona":
-            recs.append('Add writing_persona: "midnight-friend" to style.yaml (best anti-AI detection rate)')
+            recs.append('Add writing_persona: "midnight-friend" to style.yaml (best humanness rate)')
         elif name == "persona_file":
             recs.append(f'Persona file missing — check personas/ directory')
         elif name == "playbook":
@@ -309,7 +310,7 @@ def file_status_map(checks):
 
 def format_text(checks, summary, recs):
     """Format human-readable text report."""
-    lines = ["WeWrite Anti-AI Diagnostic", "=" * 26, ""]
+    lines = ["WeWrite Writing-Quality Diagnostic", "=" * 33, ""]
 
     current_group = None
     group_labels = {
@@ -340,7 +341,7 @@ def format_text(checks, summary, recs):
     mx = summary["anti_ai_max"]
     filled = round(score / mx * 12) if mx else 0
     bar = "\u2588" * filled + "\u2591" * (12 - filled)
-    lines.append(f"Anti-AI level: {bar} {summary['anti_ai_level']} ({score}/{mx})")
+    lines.append(f"Humanness level: {bar} {summary['anti_ai_level']} ({score}/{mx})")
 
     if recs:
         lines.append("")
@@ -375,7 +376,7 @@ def run_all_checks():
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Diagnose which anti-AI measures are active in this WeWrite installation.",
+        description="Diagnose which writing-quality (humanness) measures are active in this WeWrite installation.",
     )
     parser.add_argument("--json", action="store_true", help="Output structured JSON")
     args = parser.parse_args()

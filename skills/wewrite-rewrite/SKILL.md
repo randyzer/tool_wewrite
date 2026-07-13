@@ -2,7 +2,7 @@
 name: wewrite-rewrite
 description: |
   WeWrite 多平台改写模块：把一篇公众号文章（或指定源稿）内容级真改写成其他平台版本，
-  当前支持小红书（图文笔记）、抖音（口播脚本），过原创度与反 AI 双质量门。
+  当前支持小红书（图文笔记）、抖音（口播脚本），过原创度与拟人度双质量门。
   触发关键词：改写成小红书、小红书版、抖音版、口播稿、多平台分发、一稿多发、平台改写。
   不应被"翻译"、"缩写"、"换个标题"触发——那些是单平台编辑动作。
 allowed-tools:
@@ -18,7 +18,7 @@ allowed-tools:
 <!-- wewrite:standalone-start -->
 ## 运行约定
 
-- **CLI**：确定性操作走 `wewrite` 命令（需在 PATH；缺失则引导 `uv tool install git+https://github.com/oaker-io/wewrite.git`，或在仓库里 `bash install.sh`）。
+- **CLI**：确定性操作走 `wewrite` 命令（需在 PATH；缺失则引导 `uv tool install git+https://github.com/imraywang/wewrite-platform.git`，或在仓库里 `bash install.sh`）。
 - **{home}**：用户状态目录 = `$WEWRITE_HOME` 或 `~/.wewrite`（`wewrite home` 可查）。config/style/history/playbook/output/exemplars 全在 {home}，不在仓库；references 文档中的状态路径同此约定。
 - **`读取: <路径>`** = 用文件读取工具真实读完该文件再继续，不是注释。
 - **references/**：本 skill 自带 `{skill_dir}/references/`；references 文档内的 `{skill_dir}` 即本 skill 目录。

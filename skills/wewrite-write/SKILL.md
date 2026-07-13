@@ -2,7 +2,7 @@
 name: wewrite-write
 description: |
   WeWrite 写作模块（管道半内部）：在选题已确定的前提下完成「框架选择 → 素材采集/
-  内容增强 → 反 AI 正文写作」，产出 output/article.md。
+  内容增强 → 拟人正文写作」，产出 output/article.md。
   仅在两种情况触发：主入口 wewrite 管道调度；或用户已有明确选题且只要正文
   （"就这个选题写一篇""按框架 X 重写正文"）。
   "写一篇公众号（文章）"等完整需求一律触发主入口 wewrite（含选题/配图/发布），
@@ -22,7 +22,7 @@ allowed-tools:
 <!-- wewrite:standalone-start -->
 ## 运行约定
 
-- **CLI**：确定性操作走 `wewrite` 命令（需在 PATH；缺失则引导 `uv tool install git+https://github.com/oaker-io/wewrite.git`，或在仓库里 `bash install.sh`）。
+- **CLI**：确定性操作走 `wewrite` 命令（需在 PATH；缺失则引导 `uv tool install git+https://github.com/imraywang/wewrite-platform.git`，或在仓库里 `bash install.sh`）。
 - **{home}**：用户状态目录 = `$WEWRITE_HOME` 或 `~/.wewrite`（`wewrite home` 可查）。config/style/history/playbook/output/exemplars 全在 {home}，不在仓库；references 文档中的状态路径同此约定。
 - **`读取: <路径>`** = 用文件读取工具真实读完该文件再继续，不是注释。
 - **references/**：本 skill 自带 `{skill_dir}/references/`；references 文档内的 `{skill_dir}` 即本 skill 目录。

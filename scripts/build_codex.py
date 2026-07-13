@@ -36,7 +36,7 @@ CODEX_HEADER = """\
 **Codex 运行环境差异（相对 Claude Code 版）**：
 - 没有 TaskCreate/TaskUpdate 工具 —— 每进入一个 Step，用一句话报进度（如「[3/8] 框架 + 素材」）。
 - 联网搜索用 Codex 的 `web_search`；读写文件、执行命令用 Codex 自带的 shell / 文件工具。
-- 确定性操作走 `wewrite` CLI（安装：`uv tool install git+https://github.com/oaker-io/wewrite` 或 `bash {skill_dir}/install.sh`）。
+- 确定性操作走 `wewrite` CLI（安装：`uv tool install git+https://github.com/imraywang/wewrite-platform` 或 `bash {skill_dir}/install.sh`）。
 
 ---
 
@@ -92,8 +92,8 @@ CODEX_README = """\
 ## 安装
 
 ```bash
-# 1. 克隆仓库并装依赖（创建 .venv，绕过 macOS PEP 668）
-git clone --depth 1 https://github.com/oaker-io/wewrite.git ~/.codex/skills/wewrite
+# 1. 克隆仓库并安装（wewrite CLI + 状态迁移）
+git clone --depth 1 https://github.com/imraywang/wewrite-platform.git ~/.codex/skills/wewrite
 cd ~/.codex/skills/wewrite && bash install.sh
 
 # 2. 安装 Codex 自定义 prompt（把 {skill_dir} 替换成本仓库路径，写入 ~/.codex/prompts/）
@@ -108,8 +108,8 @@ python3 scripts/build_codex.py --install
 /wewrite 写一篇关于 AI Agent 的公众号文章
 ```
 
-prompt 会执行 SKILL.md 的 Step 1-8 全流程。所有 `python3` 调用自动使用
-仓库内的 `.venv`，发布/生图等能力复用 `toolkit/`。
+prompt 会执行 SKILL.md 的 Step 1-8 全流程。确定性操作（评分/排版/发布/生图）
+走 `wewrite` CLI（install.sh 已装好）。
 
 > 注：Codex 没有 Claude Code 的 SKILL.md 自动触发机制，所以通过自定义 prompt
 > 承载。每次源 `SKILL.md` 更新后，重跑 `python3 scripts/build_codex.py --install`

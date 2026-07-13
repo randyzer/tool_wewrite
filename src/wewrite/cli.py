@@ -13,7 +13,7 @@ from .paths import home
 # 子命令 → (模块, 一句话说明)。模块须提供 main(argv=None) 或 main()。
 _COMMANDS = {
     "diagnose": ("wewrite.commands.diagnose", "环境 + 配置自检（降级标记 JSON）"),
-    "score": ("wewrite.commands.humanness_score", "反 AI 评分（11 项检测）"),
+    "score": ("wewrite.commands.humanness_score", "写作质量评分（11 项检测）"),
     "hotspots": ("wewrite.commands.fetch_hotspots", "多平台热点抓取"),
     "seo": ("wewrite.commands.seo_keywords", "SEO 关键词分析"),
     "stats": ("wewrite.commands.fetch_stats", "微信文章数据回填 history"),

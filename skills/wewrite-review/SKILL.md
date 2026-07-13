@@ -1,9 +1,9 @@
 ---
 name: wewrite-review
 description: |
-  WeWrite 质量验证模块：SEO（标题/摘要/标签）+ 编辑视角整体自评 + 反 AI 评分，
+  WeWrite 质量验证模块：SEO（标题/摘要/标签）+ 编辑视角整体自评 + 写作质量评分，
   也承接「检查一下 / 自检 / 这篇文章怎么样 / 有没有 AI 味」的自检报告。
-  触发关键词：检查一下、自检、这篇文章怎么样、AI 味检测、反AI评分、公众号 SEO 优化。
+  触发关键词：检查一下、自检、这篇文章怎么样、有没有 AI 味、公众号 SEO 优化。
   需要公众号/WeWrite 上下文；不应被通用的"代码 review"、网站 SEO 触发。
 allowed-tools:
   - Bash
@@ -17,7 +17,7 @@ allowed-tools:
 <!-- wewrite:standalone-start -->
 ## 运行约定
 
-- **CLI**：确定性操作走 `wewrite` 命令（需在 PATH；缺失则引导 `uv tool install git+https://github.com/oaker-io/wewrite.git`，或在仓库里 `bash install.sh`）。
+- **CLI**：确定性操作走 `wewrite` 命令（需在 PATH；缺失则引导 `uv tool install git+https://github.com/imraywang/wewrite-platform.git`，或在仓库里 `bash install.sh`）。
 - **{home}**：用户状态目录 = `$WEWRITE_HOME` 或 `~/.wewrite`（`wewrite home` 可查）。config/style/history/playbook/output/exemplars 全在 {home}，不在仓库；references 文档中的状态路径同此约定。
 - **`读取: <路径>`** = 用文件读取工具真实读完该文件再继续，不是注释。
 - **references/**：本 skill 自带 `{skill_dir}/references/`；references 文档内的 `{skill_dir}` 即本 skill 目录。
@@ -64,7 +64,7 @@ allowed-tools:
 
 发现问题就**定向修**：只改有问题的具体句子，不重写整段，最多 3-5 处。剩下的小毛病留给作者（编辑锚点）。
 
-**5.3 反 AI 评分（顺手跑一次当参考，别为分数返工）**：
+**5.3 质量评分（顺手跑一次当参考，别为分数返工）**：
 
 ```bash
 wewrite score output/article.md --json

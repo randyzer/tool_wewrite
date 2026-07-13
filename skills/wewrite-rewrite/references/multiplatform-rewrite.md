@@ -12,7 +12,7 @@
 - 仅按平台调性适配「表达方式」：长句叙事（公众号）↔ 短句口语+emoji（小红书）↔ 可口播短句（抖音）。
 
 ## 质量门（每个版本都要过）
-1. 反 AI：`wewrite score <file> --json`，分数应 ≥ 0.6。
+1. 拟人度：`wewrite score <file> --json`，分数应 ≥ 0.6。
 2. 原创度：`wewrite similarity output/source.md <file> --json`，`max_similarity` 应 ≤ 0.6。
 3. 不过就重写该平台版本，最多重试 2 次；仍不过则保留最好的一版并说明。
 

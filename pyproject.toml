@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "wewrite"
 version = "3.0.0"
-description = "微信公众号内容管道的确定性工具层：反AI评分、排版转换、微信API、生图、混合路由写作"
+description = "微信公众号内容管道的确定性工具层：写作质量评分、排版转换、微信API、生图、混合路由写作"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -22,6 +22,9 @@ dependencies = [
 [project.optional-dependencies]
 # fetch-article 的二级降级（Playwright 抓取）；不装也能用 requests 路径
 browser = ["playwright>=1.50", "camoufox[geoip]>=0.4"]
+
+[project.urls]
+Repository = "https://github.com/imraywang/wewrite-platform"
 
 [project.scripts]
 wewrite = "wewrite.cli:main"

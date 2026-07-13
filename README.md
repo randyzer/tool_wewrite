@@ -51,7 +51,7 @@ skill 目录复制到哪都能用；CLI 与 skill 独立安装升级；换机器
 **Claude Code / Agent-Skills 宿主**（推荐，一条命令装全套）：
 
 ```bash
-git clone --depth 1 https://github.com/oaker-io/wewrite.git ~/wewrite
+git clone --depth 1 https://github.com/imraywang/wewrite-platform.git ~/wewrite
 cd ~/wewrite && bash install.sh
 ```
 
@@ -60,15 +60,15 @@ cd ~/wewrite && bash install.sh
 **skills.sh**（按需挑模块）：
 
 ```bash
-npx skills add oaker-io/wewrite
+npx skills add imraywang/wewrite-platform
 ```
 
-skill 目录自包含、复制即用；`wewrite` CLI 需另装一条：`uv tool install git+https://github.com/oaker-io/wewrite.git`。
+skill 目录自包含、复制即用；`wewrite` CLI 需另装一条：`uv tool install git+https://github.com/imraywang/wewrite-platform.git`。
 
 **OpenClaw**（单 SKILL.md 形态，用构建好的 `dist/openclaw/`）：
 
 ```bash
-git clone --depth 1 https://github.com/oaker-io/wewrite.git ~/wewrite
+git clone --depth 1 https://github.com/imraywang/wewrite-platform.git ~/wewrite
 ln -sfn ~/wewrite/dist/openclaw ~/.openclaw/skills/wewrite
 bash ~/.openclaw/skills/wewrite/install.sh
 ```
@@ -76,7 +76,7 @@ bash ~/.openclaw/skills/wewrite/install.sh
 **Codex**（OpenAI Codex CLI，经自定义 prompt 承载）：
 
 ```bash
-git clone --depth 1 https://github.com/oaker-io/wewrite.git ~/wewrite
+git clone --depth 1 https://github.com/imraywang/wewrite-platform.git ~/wewrite
 cd ~/wewrite && bash install.sh
 python3 scripts/build_codex.py --install   # 装 /wewrite prompt 到 ~/.codex/prompts/
 ```
