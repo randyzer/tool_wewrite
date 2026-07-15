@@ -15,6 +15,7 @@ _COMMANDS = {
     "diagnose": ("wewrite.commands.diagnose", "环境 + 配置自检（降级标记 JSON）"),
     "score": ("wewrite.commands.humanness_score", "写作质量评分（11 项检测）"),
     "hotspots": ("wewrite.commands.fetch_hotspots", "多平台热点抓取"),
+    "search-articles": ("wewrite.commands.search_articles", "搜狗微信搜索公众号文章"),
     "seo": ("wewrite.commands.seo_keywords", "SEO 关键词分析"),
     "stats": ("wewrite.commands.fetch_stats", "微信文章数据回填 history"),
     "learn-edits": ("wewrite.commands.learn_edits", "学习人工修改（diff → lessons）"),

@@ -35,20 +35,19 @@ wewrite hotspots --limit 30
 
 **降级**：脚本报错 → WebSearch "今日热点 {topics第一个垂类}"
 
-## 2.1b 爆款参考（可选，有 wechat-article-search skill 时启用）
+## 2.1b 爆款参考
 
-检查 `~/.claude/skills/wechat-article-search/scripts/search_wechat.js` 是否存在
-（不存在再试 `~/.agents/skills/` 同名路径）。存在则对 `topics` 的前 1-2 个垂类词各搜一次：
+对 `topics` 的前 1-2 个垂类词各搜一次近一周的公众号文章：
 
 ```bash
-node ~/.claude/skills/wechat-article-search/scripts/search_wechat.js "{垂类词}" -n 15 -t 2
+wewrite search-articles "{垂类词}" -n 15 -t 2
 ```
 
 产出近一周同垂类公众号文章列表（标题/摘要/发布时间/账号），作为「已验证的内容需求」
 信号供 2.3 使用——搜狗结果不带阅读量，爆款判断靠同题密度和标题模式（见
 topic-selection.md 爆款选题一节）。
 
-**降级**：脚本不存在 / 报错 / 结果为空 → 跳过本步，不阻断，选题构成退回默认。
+**降级**：命令报错 / 结果为空（搜狗反爬限流）→ 跳过本步，不阻断，选题构成退回默认。
 
 ## 2.2 历史分析 + SEO
 
