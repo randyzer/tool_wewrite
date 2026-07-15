@@ -1,9 +1,9 @@
 ---
 name: wewrite-topic
 description: |
-  WeWrite 选题模块：抓取全网热点 + 历史表现分析 + SEO 关键词，为公众号生成 10 个
-  评分排序的选题（含常青选题）。
-  触发关键词：公众号选题、找几个选题、今天写什么、热点选题、热搜选题、选题建议。
+  WeWrite 选题模块：抓取全网热点 + 垂类爆款参考 + 历史表现分析 + SEO 关键词，为公众号
+  生成 10 个评分排序的选题（含爆款角度与常青选题）。
+  触发关键词：公众号选题、找几个选题、今天写什么、热点选题、热搜选题、爆款选题、选题建议。
   需要公众号/微信上下文；不应被抖音/短视频/网站的选题需求触发。
 allowed-tools:
   - Bash
@@ -35,6 +35,21 @@ wewrite hotspots --limit 30
 
 **降级**：脚本报错 → WebSearch "今日热点 {topics第一个垂类}"
 
+## 2.1b 爆款参考（可选，有 wechat-article-search skill 时启用）
+
+检查 `~/.claude/skills/wechat-article-search/scripts/search_wechat.js` 是否存在
+（不存在再试 `~/.agents/skills/` 同名路径）。存在则对 `topics` 的前 1-2 个垂类词各搜一次：
+
+```bash
+node ~/.claude/skills/wechat-article-search/scripts/search_wechat.js "{垂类词}" -n 15 -t 2
+```
+
+产出近一周同垂类公众号文章列表（标题/摘要/发布时间/账号），作为「已验证的内容需求」
+信号供 2.3 使用——搜狗结果不带阅读量，爆款判断靠同题密度和标题模式（见
+topic-selection.md 爆款选题一节）。
+
+**降级**：脚本不存在 / 报错 / 结果为空 → 跳过本步，不阻断，选题构成退回默认。
+
 ## 2.2 历史分析 + SEO
 
 ```
@@ -59,7 +74,9 @@ wewrite seo --json {关键词}
 ```
 
 生成 **10 个选题**，其中：
-- **7-8 个热点选题**：基于 2.1 的热点，按 topic-selection.md 规则评分
+- **5-6 个热点选题**：基于 2.1 的热点，按 topic-selection.md 规则评分
+- **2-3 个爆款角度选题**（仅 2.1b 有产出时）：基于近一周垂类爆款文章，按
+  topic-selection.md 爆款选题规则评分，标注"🔥 爆款"；2.1b 无产出时份额还给热点
 - **2-3 个常青选题**：不依赖热点，从用户的 `topics` 领域生成长尾内容（教程/方法论/经验总结/工具推荐），标注为"常青"。适合 content_style 为干货型/测评型的用户
 
 每个选题含标题、评分、点击率潜力、SEO 友好度、推荐框架。
@@ -70,6 +87,7 @@ wewrite seo --json {关键词}
 ## 完成
 
 把选定选题写入 `{home}/output/_state.yaml`：`topic.title`、`topic.keywords`、
-`topic.source: "热点抓取"`、`topic.framework_hint`（推荐框架），`steps_done` 追加 `topic`。
+`topic.source`（"热点抓取" / "爆款参考" / "常青"）、`topic.framework_hint`（推荐框架），
+`steps_done` 追加 `topic`。
 单独激活且用户只要选题列表时，展示 10 个选题即可；用户选定后写入状态并提示
 "可以直接说'就写这个'进入写作（wewrite-write）"。

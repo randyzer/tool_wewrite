@@ -25,7 +25,7 @@ flags:                              # diagnose.py 产出（谁先跑谁写入）
 topic:                              # wewrite-topic 产出；用户直接给选题时由主入口记录
   title: ""
   keywords: []
-  source: "热点抓取"                # 或 "用户指定"
+  source: "热点抓取"                # 或 "爆款参考" / "常青" / "用户指定"
   framework_hint: ""                # 选题阶段的推荐框架
 article: "output/article.md"        # wewrite-write 产出（相对 {home}；全流程统一文件名）
 framework: ""                       # wewrite-write 选定（7 套框架之一）
